@@ -40,8 +40,8 @@ window.onload = function init(){
 
     //------------1 point perspective--------------------------------
     // Configura la matrice di vista (View Matrix)
-    var eye = vec3(0.0,0.0,2.0); // Modifica la posizione verticale della telecamera
-    var at = vec3(0.0,0.0,0); // Punto verso cui la telecamera è orientata (centro della sfera)
+    var eye = vec3(0.0,0.0,-1.0); // Modifica la posizione verticale della telecamera
+    var at = vec3(0.0,0.0,0.0); // Punto verso cui la telecamera è orientata (centro della sfera)
     var up = vec3(1.0,0.0,0.0); // Vettore "up" della telecamera
 
     // Usa la funzione lookAt per configurare la matrice di vista
@@ -122,7 +122,7 @@ window.onload = function init(){
 
 function render(){
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.drawArrays(gl.TRIANGLES, 0, pointsArray.length);
+    gl.drawArrays(gl.VERTICES, 0, pointsArray.length);
 }
 
 
@@ -130,40 +130,34 @@ function intitBulb(gl, dim) {
     pointsArray = []
     //colorsArray = []
     //normalsArray = []
+     //vertex buffer
+    
+ 
     var i = 0; var j = 0; var k = 0;
     for (i = 0; i < dim; i ++){
         for (j = 0; j < dim; j ++){
             for (k = 0; k < dim; k++) {
-                var x = map(i, 0, dim, -1, 1);
-                var y = map(j, 0, dim, -1, 1);
-                var z = map(k, 0, dim, -1, 1);
+                var x = map(i, 0, dim, -0.5, 0.5);
+                var y = map(j, 0, dim, -0.5, 0.5);
+                var z = map(k, 0, dim, -0.5, 0.5);
 
-                pointsArray.push(vec3(x,y,z));
+                pointsArray.push(vec4(x,y,z, 1.0));
                 console.log(x + " " + y + " "+ z);
             }
         }
     }
+
+    gl.deleteBuffer(gl.vBuffer);
+    gl.vBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.vBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(pointsArray), gl.STATIC_DRAW);
+    gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0); 
+    render();
 }
 
-function map(number, loworig, highorig, lowconversion, highconversion)
+function map(value, start1, stop1, start2, stop2)
 {
-    if (number < loworig) {
-        number = loworig;
-    } else if (number > highorig) {
-        number = highorig;
-    }
-
-    var num = highorig-loworig;
-    var newnum = number-num;
-
-    var ratio = newnum/num;
-
-    var convnum = highconversion - lowconversion;
-    var newconv = convnum*ratio;
-
-    var result = newconv + convnum;
-
-    return result;
+    return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
 }
 
 function initSphere(gl, numSubdivs) {
@@ -199,7 +193,7 @@ function initSphere(gl, numSubdivs) {
     gl.bufferData(gl.ARRAY_BUFFER, flatten(normalsArray), gl.STATIC_DRAW);
     gl.vertexAttribPointer(vNormal, 4, gl.FLOAT, false, 0, 0);
 
-    render()
+    render();
 }
 
 

@@ -10,8 +10,8 @@
 <script id="vertex-shader" type="x-shader/x-vertex">
 
     attribute vec4 a_Position;
-    attribute vec4 a_Color;
-    attribute vec4 a_Normal;
+    //attribute vec4 a_Color;
+    //attribute vec4 a_Normal;
 
     varying vec4 pos;
     varying vec4 color;
@@ -25,6 +25,7 @@
 
     void main() {
     
+        /*
         vec3 pos = (V * M * a_Position).xyz;
         vec3 w_i = lightDirection.w == 0.0 ? normalize(-lightDirection.xyz) : normalize(lightDirection.xyz - pos);
         vec3 normal = normalize(a_Normal.xyz);  // Normalizza la normale
@@ -34,9 +35,11 @@
     
         color = diffuseColor;
         color.a = 1.0;
+        */
 
-        gl_Position = P * V * M * a_Position;
-        gl_PointSize = 10.0; 
+        color        = vec4(0.0, 0.0, 0.0, 1.0);
+        gl_Position  = P * V * M * a_Position;
+        gl_PointSize = 1.0; 
 
 
 
@@ -47,7 +50,7 @@
         varying vec4 color;
         
         void main() {
-        gl_FragColor = color; 
+            gl_FragColor = color; 
         }
         </script>
 
