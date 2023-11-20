@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html><body> 
+<canvas id="c" width="512" height="512"></canvas>
+
+
+<script type="text/javascript" src="script.js"></script>
+<script type="text/javascript" src="../common/webgl-utils.js"></script>
+<script type="text/javascript" src="../common/initShaders.js"></script>
+<script type="text/javascript" src="../common/MV.js"></script>
+<script id="vertex-shader" type="x-shader/x-vertex">
+
+    attribute vec4 a_Position;
+    attribute vec4 a_Color;
+    attribute vec4 a_Normal;
+
+    varying vec4 pos;
+    varying vec4 color;
+
+    uniform vec4 lightDirection; 
+    uniform vec4 lightColor; //Le (Light emission)
+ 
+    uniform mat4 V;
+    uniform mat4 P;
+    uniform mat4 M; 
+
+    void main() {
+    
+        vec3 pos = (V * M * a_Position).xyz;
+        vec3 w_i = lightDirection.w == 0.0 ? normalize(-lightDirection.xyz) : normalize(lightDirection.xyz - pos);
+        vec3 normal = normalize(a_Normal.xyz);  // Normalizza la normale
+        vec4 materialColor = a_Position;
+
+        vec4 diffuseColor = materialColor * lightColor * max(dot(normal, w_i), 0.0); // Calcolo del colore diffuso
+    
+        color = diffuseColor;
+        color.a = 1.0;
+
+        gl_Position = P * V * M * a_Position;
+        gl_PointSize = 10.0; 
+
+
+
+    }
+    </script>
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision mediump float; 
+        varying vec4 color;
+        
+        void main() {
+        gl_FragColor = color; 
+
+        }
+        </script>
+
+    <div id="buttonContainer">
+        <button id="incrementSubd">Increment Subdivisions</button>
+        <button id="decrementSubd">Decrement Subdivisions</button>
+        <button id="sphereRotation">Sphere Rotation</button>
+    </div>
+</body></html>
