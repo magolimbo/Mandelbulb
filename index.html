@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html><body> 
-<canvas id="c" width="512" height="512"></canvas>
+<canvas id="c" width="720" height="720"></canvas>
 
 
 <script type="text/javascript" src="script.js"></script>
@@ -15,6 +15,7 @@
 
     varying vec4 pos;
     varying vec4 color;
+    varying vec4 fPosition;
 
     uniform vec4 lightDirection; 
     uniform vec4 lightColor; //Le (Light emission)
@@ -39,7 +40,8 @@
 
         color        = vec4(0.0, 0.0, 0.0, 1.0);
         gl_Position  = P * V * M * a_Position;
-        gl_PointSize = 1.0; 
+        gl_PointSize = 0.5; 
+        fPosition = a_Position;
 
 
 
@@ -48,9 +50,11 @@
     <script id="fragment-shader" type="x-shader/x-fragment">
         precision mediump float; 
         varying vec4 color;
+        varying vec4 fPosition;
         
         void main() {
-        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); 
+        //gl_FragColor = vec4(1.0,1.0,1.0,1.0); 
+        gl_FragColor = fPosition * 0.5 + 0.5;
         }
         </script>
 

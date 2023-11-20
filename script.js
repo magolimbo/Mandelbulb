@@ -27,7 +27,7 @@ window.onload = function init(){
     }    
 
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0.0, 0.5, 0.6, 1.0);  //Si imposta il colore di sfondo del canvas
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);  //Si imposta il colore di sfondo del canvas
 
     gl.enable(gl.DEPTH_TEST); //per garantire che si stia visualizzando la parte più vicina della superficie della sfera.
     gl.enable(gl.CULL_FACE); //per rimuovere le facce nascoste e migliorare l'efficienza.
@@ -40,7 +40,7 @@ window.onload = function init(){
 
     //------------1 point perspective--------------------------------
     // Configura la matrice di vista (View Matrix)
-    var eye = vec3(0.0,0.0,-1.0); // Modifica la posizione verticale della telecamera
+    var eye = vec3(0.0,0.0,-10); // Modifica la posizione verticale della telecamera
     var at = vec3(0.0,0.0,0.0); // Punto verso cui la telecamera è orientata (centro della sfera)
     var up = vec3(1.0,0.0,0.0); // Vettore "up" della telecamera
 
@@ -91,7 +91,7 @@ window.onload = function init(){
     rotation = false;
 
     //initSphere(gl, numTimesToSubdivide);
-    intitBulb(gl, 32);
+    intitBulb(gl, 128);
     document.getElementById("incrementSubd").onclick = function(){
         if(numTimesToSubdivide < 6)
             numTimesToSubdivide++;
@@ -122,7 +122,7 @@ window.onload = function init(){
 
 function render(){
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.drawArrays(gl.VERTICES, 0, pointsArray.length);
+    gl.drawArrays(gl.LINE_STRIP, 0, pointsArray.length);
 }
 
 
@@ -131,9 +131,6 @@ function intitBulb(gl, dim) {
     pointsArray = []
     colorsArray = []
     normalsArray = []
-    //colorsArray = []
-    //normalsArray = []
-    //vertex buffer
 
     //buffer colori
     /* gl.deleteBuffer(gl.cBuffer);
@@ -155,37 +152,43 @@ function intitBulb(gl, dim) {
     for (i = 0; i < dim; i ++){
         for (j = 0; j < dim; j ++){
             for (k = 0; k < dim; k++) {
-                var x = map(i, 0, dim, -1, 1);  //c.x etc
-                var y = map(j, 0, dim, -1, 1);
-                var z = map(k, 0, dim, -1, 1);
+                var x = map(i, 0, dim, -1.0, 1.0);  //c.x etc
+                var y = map(j, 0, dim, -1.0, 1.0);
+                var z = map(k, 0, dim, -1.0, 1.0);
                 //var spherical_c = createSpherical(x, y, z, 8); //MAKE N UN PARAMETRO 
                
+                //pointsArray.push(x,y,z,1);
                 var zeta = vec3(0.0, 0.0, 0.0); //zeta 0
-                var spherical = createSpherical(x, y, z, 8); //MAKE N UN PARAMETRO  ??BRUTTAO
+                /*var spherical = createSpherical(x, y, z, 2); //MAKE N UN PARAMETRO  ??BRUTTAO
                 var r = spherical[3];
                 var spherical_c = vec3(0.0);
                 spherical_c[0] = spherical[0];
                 spherical_c[1] = spherical[1];
-                spherical_c[2] = spherical[2];
+                spherical_c[2] = spherical[2];*/
 
                 var max_iter = 5;
                 var iter = 0; 
+                
+                //polar coordinates
+                var r     = Math.sqrt(x*x + y*y + z*z);
+                var theta = Math.atan2( Math.sqrt(x*x + y*y), z);
+                var phi   = Math.atan2(y, x);
+                var newvec;
                 while (true){
-                    if(r > 16){
+                    if(r > 0.9){
                         break;
                     }
-                    //zeta = zeta alla n + c
-                    zeta = createSpherical(zeta[0], zeta[1], zeta[2], 8); //+ spherical_c;
-                    zeta[0] =  zeta[0]+ spherical_c[0];
-                    zeta[1] =  zeta[1]+ spherical_c[1];
-                    zeta[2] =  zeta[2]+ spherical_c[2];
-                    console.log(zeta);
-                    iter++;
                     if(iter > max_iter){
-                        pointsArray.push(vec4(zeta[0], zeta[1], zeta[2], 1.0));
+                        pointsArray.push(vec4(zeta[0]*0.5, zeta[1]*0.5, zeta[2]*0.5, 1.0));
                         break;
                     }
-                }
+                    newvec = createSpherical(r, theta, phi, 8)
+                    zeta[0] = newvec[0] + x
+                    zeta[1] = newvec[1] + y
+                    zeta[2] = newvec[2] + z
+                    
+                    iter++;
+                } 
             }
         }
     }
@@ -197,18 +200,14 @@ function intitBulb(gl, dim) {
     render();
 }
 
-function createSpherical(x, y, z, n){  //n = 8
-    //polar coordinates
-    var r     = Math.sqrt(x*x + y*y + z*z);
-    var theta = Math.atan2( Math.sqrt(x*x + y*y), z);
-    var phi   = Math.atan2(y, x);
+function createSpherical(r, theta, phi, n){  //n = 8
 
     //spehrical coordinates
     var newx = Math.pow(r, n) * Math.sin(theta*n) * Math.cos(phi*n);
     var newy = Math.pow(r, n) * Math.sin(theta*n) * Math.sin(phi*n);
     var newz = Math.pow(r, n) * Math.cos(theta*n);
 
-    return vec4(newx, newy, newz, r);
+    return vec3(newx, newy, newz);
 
 }
 
