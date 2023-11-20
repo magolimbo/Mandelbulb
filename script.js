@@ -122,15 +122,39 @@ window.onload = function init(){
 
 function render(){
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.drawArrays(gl.TRIANGLES, 0, pointsArray.length);
+    gl.drawArrays(gl.VERTICES, 0, pointsArray.length);
 }
 
 
 function intitBulb(gl, dim) {
     pointsArray = []
+    colorsArray = []
+    normalsArray = []
     //colorsArray = []
     //normalsArray = []
-    var i = 0; var j = 0; var k = 0;
+
+    //vertex buffer
+    gl.deleteBuffer(gl.vBuffer);
+    gl.vBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.vBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(pointsArray), gl.STATIC_DRAW);
+    gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0); 
+
+    //buffer colori
+    /* gl.deleteBuffer(gl.cBuffer);
+    gl.cBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.cBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(colorsArray), gl.STATIC_DRAW);
+    gl.vertexAttribPointer(vColor, 4, gl.FLOAT, false, 0, 0); */
+       
+    //buffer normali
+    gl.deleteBuffer(gl.nBuffer);
+    gl.nBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.nBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(normalsArray), gl.STATIC_DRAW);
+    gl.vertexAttribPointer(vNormal, 4, gl.FLOAT, false, 0, 0);
+
+    /* var i = 0; var j = 0; var k = 0;
     for (i = 0; i < dim; i ++){
         for (j = 0; j < dim; j ++){
             for (k = 0; k < dim; k++) {
@@ -139,10 +163,11 @@ function intitBulb(gl, dim) {
                 var z = map(k, 0, dim, -1, 1);
 
                 pointsArray.push(vec3(x,y,z));
-                console.log(x + " " + y + " "+ z);
             }
         }
-    }
+    } */
+    pointsArray.push(vec3(0.0, 0.0, 0.0, 1.0))
+    render()
 }
 
 function map(number, loworig, highorig, lowconversion, highconversion)
