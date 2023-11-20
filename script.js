@@ -90,8 +90,8 @@ window.onload = function init(){
     eRot = vec3(radius * Math.sin(alpha), 0, radius * Math.cos(alpha));
     rotation = false;
 
-    initSphere(gl, numTimesToSubdivide);
-
+    //initSphere(gl, numTimesToSubdivide);
+    intitBulb(gl, 32);
     document.getElementById("incrementSubd").onclick = function(){
         if(numTimesToSubdivide < 6)
             numTimesToSubdivide++;
@@ -123,6 +123,47 @@ window.onload = function init(){
 function render(){
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, pointsArray.length);
+}
+
+
+function intitBulb(gl, dim) {
+    pointsArray = []
+    //colorsArray = []
+    //normalsArray = []
+    var i = 0; var j = 0; var k = 0;
+    for (i = 0; i < dim; i ++){
+        for (j = 0; j < dim; j ++){
+            for (k = 0; k < dim; k++) {
+                var x = map(i, 0, dim, -1, 1);
+                var y = map(j, 0, dim, -1, 1);
+                var z = map(k, 0, dim, -1, 1);
+
+                pointsArray.push(vec3(x,y,z));
+                console.log(x + " " + y + " "+ z);
+            }
+        }
+    }
+}
+
+function map(number, loworig, highorig, lowconversion, highconversion)
+{
+    if (number < loworig) {
+        number = loworig;
+    } else if (number > highorig) {
+        number = highorig;
+    }
+
+    var num = highorig-loworig;
+    var newnum = number-num;
+
+    var ratio = newnum/num;
+
+    var convnum = highconversion - lowconversion;
+    var newconv = convnum*ratio;
+
+    var result = newconv + convnum;
+
+    return result;
 }
 
 function initSphere(gl, numSubdivs) {
