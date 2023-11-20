@@ -82,8 +82,8 @@ window.onload = function init(){
     /* vColor = gl.getAttribLocation(program, "a_Color"); 
     gl.enableVertexAttribArray(vColor);   */
     
-    vNormal = gl.getAttribLocation(program, "a_Normal"); 
-    gl.enableVertexAttribArray(vNormal);
+    /*vNormal = gl.getAttribLocation(program, "a_Normal"); 
+    gl.enableVertexAttribArray(vNormal);*/
 
     //sphere parameters
     alpha = 0.0;
@@ -127,6 +127,7 @@ function render(){
 
 
 function intitBulb(gl, dim) {
+
     pointsArray = []
     colorsArray = []
     normalsArray = []
@@ -142,33 +143,75 @@ function intitBulb(gl, dim) {
     gl.vertexAttribPointer(vColor, 4, gl.FLOAT, false, 0, 0); */
        
     //buffer normali
-    gl.deleteBuffer(gl.nBuffer);
+    /*gl.deleteBuffer(gl.nBuffer);
     gl.nBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.nBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(normalsArray), gl.STATIC_DRAW);
     gl.vertexAttribPointer(vNormal, 4, gl.FLOAT, false, 0, 0);
+    */
 
+    //per i vari c
     var i = 0; var j = 0; var k = 0;
     for (i = 0; i < dim; i ++){
         for (j = 0; j < dim; j ++){
             for (k = 0; k < dim; k++) {
-                var x = map(i, 0, dim, -0.5, 0.5);
-                var y = map(j, 0, dim, -0.5, 0.5);
-                var z = map(k, 0, dim, -0.5, 0.5);
-                pointsArray.push(vec4(x,y,z, 1.0));
-                console.log(x + " " + y + " "+ z);
+                var x = map(i, 0, dim, -1, 1);  //c.x etc
+                var y = map(j, 0, dim, -1, 1);
+                var z = map(k, 0, dim, -1, 1);
+                //var spherical_c = createSpherical(x, y, z, 8); //MAKE N UN PARAMETRO 
+               
+                var zeta = vec3(0.0, 0.0, 0.0); //zeta 0
+                var spherical = createSpherical(x, y, z, 8); //MAKE N UN PARAMETRO  ??BRUTTAO
+                var r = spherical[3];
+                var spherical_c = vec3(0.0);
+                spherical_c[0] = spherical[0];
+                spherical_c[1] = spherical[1];
+                spherical_c[2] = spherical[2];
+
+                var max_iter = 5;
+                var iter = 0; 
+                while (true){
+                    if(r > 16){
+                        break;
+                    }
+                    //zeta = zeta alla n + c
+                    zeta = createSpherical(zeta[0], zeta[1], zeta[2], 8); //+ spherical_c;
+                    zeta[0] =  zeta[0]+ spherical_c[0];
+                    zeta[1] =  zeta[1]+ spherical_c[1];
+                    zeta[2] =  zeta[2]+ spherical_c[2];
+                    console.log(zeta);
+                    iter++;
+                    if(iter > max_iter){
+                        pointsArray.push(vec4(zeta[0], zeta[1], zeta[2], 1.0));
+                        break;
+                    }
+                }
             }
         }
     }
-
     gl.deleteBuffer(gl.vBuffer);
     gl.vBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.vBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(pointsArray), gl.STATIC_DRAW);
     gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0);
     render();
+}
+
+function createSpherical(x, y, z, n){  //n = 8
+    //polar coordinates
+    var r     = Math.sqrt(x*x + y*y + z*z);
+    var theta = Math.atan2( Math.sqrt(x*x + y*y), z);
+    var phi   = Math.atan2(y, x);
+
+    //spehrical coordinates
+    var newx = Math.pow(r, n) * Math.sin(theta*n) * Math.cos(phi*n);
+    var newy = Math.pow(r, n) * Math.sin(theta*n) * Math.sin(phi*n);
+    var newz = Math.pow(r, n) * Math.cos(theta*n);
+
+    return vec4(newx, newy, newz, r);
 
 }
+
 
 function map(value, start1, stop1, start2, stop2)
 {
