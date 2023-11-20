@@ -134,13 +134,6 @@ function intitBulb(gl, dim) {
     //normalsArray = []
     //vertex buffer
 
-    //vertex buffer
-    gl.deleteBuffer(gl.vBuffer);
-    gl.vBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.vBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(pointsArray), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0); 
-
     //buffer colori
     /* gl.deleteBuffer(gl.cBuffer);
     gl.cBuffer = gl.createBuffer();
@@ -168,11 +161,11 @@ function intitBulb(gl, dim) {
         }
     }
 
-   /* gl.deleteBuffer(gl.vBuffer);
+    gl.deleteBuffer(gl.vBuffer);
     gl.vBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.vBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(pointsArray), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0); */
+    gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0);
     render();
 
 }
