@@ -40,7 +40,7 @@
 
         color        = vec4(0.0, 0.0, 0.0, 1.0);
         gl_Position  = P * V * M * a_Position;
-        gl_PointSize = 0.5; 
+        gl_PointSize = 0.1; 
         fPosition = a_Position;
 
 
@@ -53,8 +53,8 @@
         varying vec4 fPosition;
         
         void main() {
-        //gl_FragColor = vec4(1.0,1.0,1.0,1.0); 
-        gl_FragColor = fPosition * 0.5 + 0.5;
+        gl_FragColor = vec4(1.0,1.0,1.0,1.0); 
+        //gl_FragColor = fPosition. * 0.5 + 0.5;
         }
         </script>
 
