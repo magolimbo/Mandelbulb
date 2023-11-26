@@ -8,6 +8,7 @@ var vPosition;
 var vColor;
 var vNormal;
 var vLoc;
+var timeLoc;
 //camera parameters
 const radius = 2.0;
 var alpha
@@ -85,13 +86,15 @@ window.onload = function init(){
     /*vNormal = gl.getAttribLocation(program, "a_Normal"); 
     gl.enableVertexAttribArray(vNormal);*/
 
+    timeLoc = gl.getUniformLocation(program, "time");
+
     //sphere parameters
     alpha = 0.0;
     eRot = vec3(radius * Math.sin(alpha), 0, radius * Math.cos(alpha));
     rotation = false;
 
     //initSphere(gl, numTimesToSubdivide);
-    intitBulb(gl, 128);
+    intitBulb(gl, 64);
     document.getElementById("incrementSubd").onclick = function(){
         if(numTimesToSubdivide < 6)
             numTimesToSubdivide++;
@@ -155,15 +158,15 @@ function intitBulb(gl, dim) {
     var newvec = vec3(0);
     for (i = 0; i < dim; i ++){
         for (j = 0; j < dim; j ++){
+            var edge = false;
             for (k = 0; k < dim; k++) {
-                var edge = false;
                 var x = map(i, 0, dim, -1.0, 1.0);  //c.x etc
                 var y = map(j, 0, dim, -1.0, 1.0);
                 var z = map(k, 0, dim, -1.0, 1.0);
                 //var spherical_c = createSpherical(x, y, z, 8); //MAKE N UN PARAMETRO 
                
                 var zeta = vec3(0.0, 0.0, 0.0); //zeta 0
-                var max_iter = 15;
+                var max_iter = 10;
                 var iter = 0; 
                 while (true){
                 
@@ -186,7 +189,7 @@ function intitBulb(gl, dim) {
                     if(iter > max_iter){
                         if(!edge){
                             edge = true;
-                            pointsArray.push(vec4(zeta[0], zeta[1], zeta[2], 1.0));
+                            pointsArray.push(vec4(x,y,z, 1.0));
                         }
                         break;
                     }
@@ -301,6 +304,7 @@ function cameraRotation(){
     if(rotation){
         console.log("x")
         alpha = alpha + 0.02;
+        gl.uniform1f(timeLoc, alpha);
         eRot = vec3(radius * Math.sin(alpha), 0, radius * Math.cos(alpha));
         var V = lookAt(eRot, vec3(0.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0));
         gl.uniformMatrix4fv(VLoc,false, flatten(V));
