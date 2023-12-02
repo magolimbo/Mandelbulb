@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html><body> 
+<canvas id="c" width="720" height="720"></canvas>
+
+
+<script type="text/javascript" src="experimental_script.js"></script>
+<script type="text/javascript" src="../common/webgl-utils.js"></script>
+<script type="text/javascript" src="../common/initShaders.js"></script>
+<script type="text/javascript" src="../common/MV.js"></script>
+<script id="vertex-shader" type="x-shader/x-vertex">
+
+    attribute vec4 a_Position;
+    //attribute vec4 a_Color;
+    //attribute vec4 a_Normal;
+
+    varying vec4 pos;
+    varying vec4 color;
+    varying vec4 fPosition;
+
+    uniform vec4 lightDirection; 
+    uniform vec4 lightColor; //Le (Light emission)
+ 
+    uniform mat4 V;
+    uniform mat4 P;
+    uniform mat4 M; 
+
+    void main() {
+
+        color        = vec4(0.0, 0.0, 0.0, 1.0);
+        gl_Position  = P * V * M * a_Position;
+        gl_PointSize = 10.0; 
+        fPosition = a_Position;
+
+
+
+    }
+    </script>
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision mediump float; 
+        varying vec4 color;
+        varying vec4 fPosition;
+        
+        void main() {
+        //gl_FragColor = vec4(1.0,1.0,1.0,1.0); 
+        gl_FragColor = fPosition * 0.5 + 0.5;
+        }
+        </script>
+
+    <div id="buttonContainer">
+        <button id="incrementSubd">Increment Subdivisions</button>
+        <button id="decrementSubd">Decrement Subdivisions</button>
+        <button id="sphereRotation">Sphere Rotation</button>
+    </div>
+</body></html>
