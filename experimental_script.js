@@ -20,6 +20,8 @@ const radius = 2.0;
 var alpha
 var eRot
 var rotation
+var exponent = 8;
+var dim = 32;
 
 
 window.onload = function init(){
@@ -92,31 +94,17 @@ window.onload = function init(){
     /*vNormal = gl.getAttribLocation(program, "a_Normal"); 
     gl.enableVertexAttribArray(vNormal);*/
 
+    //points dimensions
+    var pointsDimLoc = gl.getUniformLocation(program,"pointsDim");
+    gl.uniform1f(pointsDimLoc, 2.0); 
+
     //sphere parameters
     alpha = 0.0;
     eRot = vec3(radius * Math.sin(alpha), 0, radius * Math.cos(alpha));
     rotation = false;
 
     //initSphere(gl, numTimesToSubdivide);
-    intitBulb(gl, 128);
-    document.getElementById("incrementSubd").onclick = function(){
-        if(numTimesToSubdivide < 6)
-            numTimesToSubdivide++;
-            initSphere(gl, numTimesToSubdivide)
-            if(!rotation){
-                render();
-            }
-    };
-
-    document.getElementById("decrementSubd").onclick = function(){
-        if(numTimesToSubdivide){
-            numTimesToSubdivide--; 
-        } 
-        initSphere(gl, numTimesToSubdivide)
-        if(!rotation){
-            render();
-        }
-    };
+    initBulb(gl, dim, exponent);
 
     document.getElementById("sphereRotation").onclick = function(){
         if(!rotation){
@@ -125,6 +113,43 @@ window.onload = function init(){
         else rotation = false;
         cameraRotation()
     };
+
+    document.getElementById("pointsDimensions").addEventListener("input", function(event)
+    {
+        gl.uniform1f(pointsDimLoc, event.target.value);
+        render();
+
+    });
+
+    document.getElementById("mandelbulbExponent+").onclick = function(){
+        if(exponent < 20){
+            exponent++
+            initBulb(gl, dim, exponent)
+        }
+    };
+
+    document.getElementById("mandelbulbExponent-").onclick = function(){
+        if(exponent > 2){
+            exponent--
+            initBulb(gl, dim, exponent)
+        }
+    };
+
+    document.getElementById("mandelbulbDensity+").onclick = function(){
+        if(dim < 128){
+            dim *= 2
+            initBulb(gl, dim, exponent)
+        }
+    };
+
+    document.getElementById("mandelbulbDensity-").onclick = function(){
+        if(dim > 2){
+            dim = dim/2
+            initBulb(gl, dim, exponent)
+        }
+    };
+
+    
 }
 
 function render(){
@@ -133,7 +158,7 @@ function render(){
 }
 
 
-function intitBulb(gl, dim) {
+function initBulb(gl, dim, exponent) {
 
     pointsArray = []
 
@@ -157,7 +182,7 @@ function intitBulb(gl, dim) {
                     r     = Math.sqrt(zeta[0]*zeta[0] + zeta[1]*zeta[1] + zeta[2]*zeta[2]);
                     theta = Math.atan2( Math.sqrt(zeta[0]*zeta[0] + zeta[1]*zeta[1]), zeta[2]);
                     phi   = Math.atan2(zeta[1], zeta[0]);
-                    newvec = createSpherical(r, theta, phi, 8); //this fives me newx newy and newz
+                    newvec = createSpherical(r, theta, phi, exponent); //this fives me newx newy and newz
                     zeta[0] = newvec[0] + x
                     zeta[1] = newvec[1] + y
                     zeta[2] = newvec[2] + z

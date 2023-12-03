@@ -19,6 +19,7 @@
 
     uniform vec4 lightDirection; 
     uniform vec4 lightColor; //Le (Light emission)
+    uniform float pointsDim;
  
     uniform mat4 V;
     uniform mat4 P;
@@ -28,7 +29,7 @@
 
         color        = vec4(0.0, 0.0, 0.0, 1.0);
         gl_Position  = P * V * M * a_Position;
-        gl_PointSize = 10.0; 
+        gl_PointSize = pointsDim; 
         fPosition = a_Position;
 
 
@@ -46,9 +47,29 @@
         }
         </script>
 
-    <div id="buttonContainer">
-        <button id="incrementSubd">Increment Subdivisions</button>
-        <button id="decrementSubd">Decrement Subdivisions</button>
-        <button id="sphereRotation">Sphere Rotation</button>
+        <!-- Aggiunta del menu -->
+        <div id="menuContainer">
+            <h2>Toggle Mandelbulb</h2>
+            <div id="buttonContainer">
+                <button id="sphereRotation">Sphere Rotation</button>
+            </div>
+            <div>
+                <label for="mandelbulbExponent+">Mandelbulb Exponent</label>
+                <button id="mandelbulbExponent+">increase</button>
+                <button id="mandelbulbExponent-">decrease</button>
+            </div>
+            <div>
+                <label for="mandelbulbDensity+">Point Cloud Density</label>
+                <button id="mandelbulbDensity+">increase</button>
+                <button id="mandelbulbDensity-">decrease</button>
+            </div>
+
+            <div>
+                <label for="pointsDimensions">Increase Points Dimensions</label>
+                <input type="range" id="pointsDimensions" min="0.0" max="50.0" step="0.5" value="2.0">
+            </div>
+
+            <button id="fancyMandelbulb1">Fancy Mandelbulb 1</button>
+            <button id="fancyMandelbulb2">Fancy Mandelbulb 2</button>
     </div>
 </body></html>
