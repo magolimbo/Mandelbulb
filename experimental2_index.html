@@ -11,8 +11,8 @@
 <script id="vertex-shader" type="x-shader/x-vertex">
 
     attribute vec4 vPosition;
-    attribute vec4 vColor;
-    attribute vec4 vNormal;
+    //attribute vec4 vColor;
+    //attribute vec4 vNormal;
 
     varying vec4 pos;
     varying vec4 color;
@@ -27,7 +27,7 @@
 
     void main() {
 
-        color        = vec4(0.0, 0.0, 0.0, 1.0) * vNormal.x * vColor.x;
+        color        = vec4(0.0, 0.0, 0.0, 1.0);// * vNormal.x * vColor.x;
         gl_Position  = P * V * M * vPosition;
         gl_PointSize = 10.0; 
         fPosition = vPosition;
