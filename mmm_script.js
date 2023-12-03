@@ -1,12 +1,3 @@
-//make points as polygons, with the original point as an attribute, which is the center
-//so render points as quads, make quad around normal
-
-//make a texture that has a kernel that falls off from the center (cubic function) or gaussian -.> fall off to 0 so no seems
-
-var g_objDoc = null; // The information of OBJ file
-var g_drawingInfo = null; // The information for drawing 3D model
-
-
 var pointsArray = []
 var colorsArray = []
 var normalsArray = []
@@ -17,6 +8,7 @@ var vPosition;
 var vColor;
 var vNormal;
 var vLoc;
+var timeLoc;
 //camera parameters
 const radius = 2.0;
 var alpha
@@ -36,24 +28,22 @@ window.onload = function init(){
     }    
 
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0.8, 0.5, 0.0, 1.0);  //Si imposta il colore di sfondo del canvas
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);  //Si imposta il colore di sfondo del canvas
 
-    gl.enable(gl.CULL_FACE);
-    gl.cullFace(gl.BACK);
-    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.DEPTH_TEST); //per garantire che si stia visualizzando la parte più vicina della superficie della sfera.
+    gl.enable(gl.CULL_FACE); //per rimuovere le facce nascoste e migliorare l'efficienza.
 
     program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program); 
 
     gl.vBuffer = null;
     gl.cBuffer = null;
-    gl.nBuffer = null;
 
     //------------1 point perspective--------------------------------
     // Configura la matrice di vista (View Matrix)
-    var eye = vec3(0, 0, -5);
-    var at  = vec3(0, 0, 0);
-    var up  = vec3(0.0, 1.0, 0.0);
+    var eye = vec3(0.0,0.0,-10); // Modifica la posizione verticale della telecamera
+    var at = vec3(0.0,0.0,0.0); // Punto verso cui la telecamera è orientata (centro della sfera)
+    var up = vec3(1.0,0.0,0.0); // Vettore "up" della telecamera
 
     // Usa la funzione lookAt per configurare la matrice di vista
     var V = lookAt(eye, at, up);
@@ -65,8 +55,7 @@ window.onload = function init(){
     var aspect = 1.0;   // Rapporto di aspetto 1:1 (canvas quadrato)
     var near = 1;     // Distanza minima dalla telecamera
     var far = 15.0;    // Distanza massima dalla telecamera
-    var P = perspective(45, aspect, 0.1, 100);
-    //P = perspective(45, 1, 0.1, 200.0); 
+    var P = perspective(fovy, aspect, near, far);
     var PLoc = gl.getUniformLocation(program, "P");
     gl.uniformMatrix4fv(PLoc, false, flatten(P));
 
@@ -84,42 +73,28 @@ window.onload = function init(){
     var lightColorLoc = gl.getUniformLocation(program, "lightColor");
     gl.uniform4fv(lightColorLoc, flatten(lightColor));
 
-    vPosition = gl.getAttribLocation(program, "vPosition"); 
+    /* var materialColor = vec4(100, 100, 10, 1.0); //diffuse reflection coefficient kd
+    var materialColorLoc = gl.getUniformLocation(program, "materialColor");
+    gl.uniform4fv(materialColorLoc, flatten(materialColor));
+ */
+    vPosition = gl.getAttribLocation(program, "a_Position"); 
     gl.enableVertexAttribArray(vPosition); 
+
+    /* vColor = gl.getAttribLocation(program, "a_Color"); 
+    gl.enableVertexAttribArray(vColor);   */
+    
+    /*vNormal = gl.getAttribLocation(program, "a_Normal"); 
+    gl.enableVertexAttribArray(vNormal);*/
+
+    timeLoc = gl.getUniformLocation(program, "time");
 
     //sphere parameters
     alpha = 0.0;
     eRot = vec3(radius * Math.sin(alpha), 0, radius * Math.cos(alpha));
     rotation = false;
 
-    //intitBulb(gl, 128);  //calculates points of madelBulb point cloud.
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    //var filename = 'bulb1.obj';
-    var filename = '../worksheet5/monkey.obj'
-    
-    var model = initObject(gl, filename, 10.0);
-
-    //renderModel();
-    //cameraRotation();
-
-    function renderModel()
-    {
-        if(!g_drawingInfo && g_objDoc && g_objDoc.isMTLComplete()) {
-            g_drawingInfo = onReadComplete(gl, model, g_objDoc);
-        }
-        if(!g_drawingInfo) {return;}
-
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.drawElements(gl.TRIANGLES, g_drawingInfo.indices.length, gl.UNSIGNED_INT, 0);
-    }
-
-    function tick(){
-        renderModel();
-        requestAnimationFrame(tick);
-    }
-    tick();
-
-
+    //initSphere(gl, numTimesToSubdivide);
+    intitBulb(gl, 64);
     document.getElementById("incrementSubd").onclick = function(){
         if(numTimesToSubdivide < 6)
             numTimesToSubdivide++;
@@ -144,20 +119,8 @@ window.onload = function init(){
             rotation = true;
         }
         else rotation = false;
-        cameraRotation();
+        cameraRotation()
     };
-
-    function cameraRotation(){
-        if(rotation){
-            console.log("x")
-            alpha = alpha + 0.02;
-            eRot = vec3(radius * Math.sin(alpha), 0, radius * Math.cos(alpha));
-            var V = lookAt(eRot, vec3(0.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0));
-            gl.uniformMatrix4fv(VLoc,false, flatten(V));
-            tick();  
-        } 
-    }
-
 }
 
 function render(){
@@ -169,28 +132,49 @@ function render(){
 function intitBulb(gl, dim) {
 
     pointsArray = []
+    colorsArray = []
+    normalsArray = []
+
+    //buffer colori
+    /* gl.deleteBuffer(gl.cBuffer);
+    gl.cBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.cBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(colorsArray), gl.STATIC_DRAW);
+    gl.vertexAttribPointer(vColor, 4, gl.FLOAT, false, 0, 0); */
+       
+    //buffer normali
+    /*gl.deleteBuffer(gl.nBuffer);
+    gl.nBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.nBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(normalsArray), gl.STATIC_DRAW);
+    gl.vertexAttribPointer(vNormal, 4, gl.FLOAT, false, 0, 0);
+    */
 
     //per i vari c
     var i = 0; var j = 0; var k = 0;
-    
+    var r = 0;
+    var theta = 0;
+    var phi = 0;
+    var newvec = vec3(0);
     for (i = 0; i < dim; i ++){
         for (j = 0; j < dim; j ++){
             var edge = false;
             for (k = 0; k < dim; k++) {
-                var x = map(i, 0, dim, -1.0, 1.0);  //c.x 
-                var y = map(j, 0, dim, -1.0, 1.0);  //c.y
-                var z = map(k, 0, dim, -1.0, 1.0);  //c.z
-
+                var x = map(i, 0, dim, -1.0, 1.0);  //c.x etc
+                var y = map(j, 0, dim, -1.0, 1.0);
+                var z = map(k, 0, dim, -1.0, 1.0);
+                //var spherical_c = createSpherical(x, y, z, 8); //MAKE N UN PARAMETRO 
+               
                 var zeta = vec3(0.0, 0.0, 0.0); //zeta 0
                 var max_iter = 10;
                 var iter = 0; 
-
                 while (true){
+                
                     //polar coordinates
-                    r     = Math.sqrt(zeta[0]*zeta[0] + zeta[1]*zeta[1] + zeta[2]*zeta[2]);
-                    theta = Math.atan2( Math.sqrt(zeta[0]*zeta[0] + zeta[1]*zeta[1]), zeta[2]);
+                    r  = Math.sqrt(zeta[0]*zeta[0] + zeta[1]*zeta[1] + zeta[2]*zeta[2]);
+                    theta = Math.atan2( Math.sqrt(zeta[0]*zeta[0]+ zeta[1]*zeta[1]), zeta[2]*zeta[2]);
                     phi   = Math.atan2(zeta[1], zeta[0]);
-                    newvec = createSpherical(r, theta, phi, 8); //this fives me newx newy and newz
+                    newvec = createSpherical(r, theta, phi, 8)
                     zeta[0] = newvec[0] + x
                     zeta[1] = newvec[1] + y
                     zeta[2] = newvec[2] + z
@@ -205,10 +189,12 @@ function intitBulb(gl, dim) {
                     if(iter > max_iter){
                         if(!edge){
                             edge = true;
-                            pointsArray.push(vec4(x, y, z, 1.0));
+                            pointsArray.push(vec4(x,y,z, 1.0));
                         }
                         break;
                     }
+                    //console.log("raggio = " + r)
+                    //console.log("iterazione numero "+iter)
                 } 
             }
         }
@@ -218,18 +204,12 @@ function intitBulb(gl, dim) {
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.vBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(pointsArray), gl.STATIC_DRAW);
     gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0);
-
-    /*gl.deleteBuffer(gl.nBuffer);
-    gl.nBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.nBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(normalsArray), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(vNormal, 4, gl.FLOAT, false, 0, 0);*/
-
     render();
 }
 
 function createSpherical(r, theta, phi, n){  //n = 8
-    //spherical coordinates
+
+    //spehrical coordinates
     var newzeta_x = Math.pow(r, n) * Math.sin(theta*n) * Math.cos(phi*n);
     var newzeta_y = Math.pow(r, n) * Math.sin(theta*n) * Math.sin(phi*n);
     var newzeta_z = Math.pow(r, n) * Math.cos(theta*n);
@@ -238,12 +218,12 @@ function createSpherical(r, theta, phi, n){  //n = 8
 
 }
 
+
 function map(value, start1, stop1, start2, stop2)
 {
     return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
 }
 
-//dont need this ??
 function initSphere(gl, numSubdivs) {
     pointsArray = []
     colorsArray = []
@@ -262,6 +242,13 @@ function initSphere(gl, numSubdivs) {
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.vBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(pointsArray), gl.STATIC_DRAW);
     gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0); 
+
+    //buffer colori
+    /* gl.deleteBuffer(gl.cBuffer);
+    gl.cBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.cBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(colorsArray), gl.STATIC_DRAW);
+    gl.vertexAttribPointer(vColor, 4, gl.FLOAT, false, 0, 0); */
        
     //buffer normali
     gl.deleteBuffer(gl.nBuffer);
@@ -273,18 +260,22 @@ function initSphere(gl, numSubdivs) {
     render();
 }
 
-//dont need this ??
+
 function triangle(a, b, c) {
     pointsArray.push(a);
     pointsArray.push(b);
     pointsArray.push(c);
+
+    /* colorsArray.push(vec4(1.0, 0.5, 0.0, 1.0));  // Arancione
+    colorsArray.push(vec4(1.0, 0.5, 0.0, 1.0));  // Arancione
+    colorsArray.push(vec4(1.0, 0.5, 0.0, 1.0));  // Arancione */
 
     normalsArray.push(vec4(a[0], a[1], a[2], 0.0));
     normalsArray.push(vec4(b[0], b[1], b[2], 0.0));
     normalsArray.push(vec4(c[0], c[1], c[2], 0.0)); 
 }
 
-//dont need this ??
+
 function divideTriangle(a, b, c, count) {
    if ( count > 0 ) {
 
@@ -301,7 +292,7 @@ function divideTriangle(a, b, c, count) {
        triangle( a, b, c );
    }
 }
-//dont need this ??
+
 function tetrahedron(a, b, c, d, n) {
    divideTriangle(a, b, c, n);
    divideTriangle(d, c, b, n);
@@ -309,86 +300,15 @@ function tetrahedron(a, b, c, d, n) {
    divideTriangle(a, c, d, n);
 }
 
-
-
-//---- FUNCTIONS FOR OBJECT LOADING ------///
-function initObject(gl, obj_filename, scale){
-    program.vPosition = gl.getAttribLocation(program, 'vPosition');
-    program.vNormal   = gl.getAttribLocation(program, 'vNormal');
-    program.vColor    = gl.getAttribLocation(program, 'vColor');
-
-    var model = initiVertexBuffers(gl);
-
-    readOBJFile(obj_filename, gl, model, scale, true);
-
-    return model;
-}
-
-function initiVertexBuffers(gl){
-    var obj = new Object();
-    obj.vertexBuffer = createEmptyArrayBuffer(gl, program.vPosition, 4, gl.FLOAT);
-    obj.normalBuffer = createEmptyArrayBuffer(gl, program.vNormal, 4, gl.FLOAT);
-    obj.colorBuffer  = createEmptyArrayBuffer(gl, program.vColor, 4, gl.FLOAT);
-    obj.indexBuffer  = gl.createBuffer();
-    return obj;
-}
-
-
-function createEmptyArrayBuffer(gl, a_attribute, num, type) {
-    var buffer = gl.createBuffer(); // Create a buffer object
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.vertexAttribPointer(a_attribute, num, type, false, 0, 0);
-    gl.enableVertexAttribArray(a_attribute); // Enable the assignment
-    return buffer;
-}
-
-function readOBJFile(fileName, gl, model, scale, reverse) {
-    var request = new XMLHttpRequest();
-    
-    request.onreadystatechange = function() {
-        if (request.readyState === 4 && request.status !== 404) {
-            onReadOBJFile(request.responseText, fileName, gl, model, scale, reverse);
-        }
-    }
-    request.open('GET', fileName, true); // Create a request to get file
-    request.send(); // Send the request
-}
-
-var g_objDoc = null; // The information of OBJ file
-var g_drawingInfo = null; // The information for drawing 3D model
-
-// OBJ file has been read
-function onReadOBJFile(fileString, fileName, gl, o, scale, reverse) {
-    var objDoc = new OBJDoc(fileName); // Create a OBJDoc object
-    var result = objDoc.parse(fileString, scale, reverse);
-    if (!result) {
-        g_objDoc = null; g_drawingInfo = null;
-        console.log("OBJ file parsing error.");
-        return;
-    }
-    g_objDoc = objDoc;
-} 
-
-function onReadComplete(gl, model, objDoc) {
-// Acquire the vertex coordinates and colors from OBJ file
-    var drawingInfo = objDoc.getDrawingInfo();
-// Write date into the buffer object
-    gl.bindBuffer(gl.ARRAY_BUFFER, model.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, drawingInfo.vertices,gl.STATIC_DRAW);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, model.normalBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, drawingInfo.normals, gl.STATIC_DRAW);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, model.colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, drawingInfo.colors, gl.STATIC_DRAW);
-
-    // Write the indices to the buffer object
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, drawingInfo.indices, gl.STATIC_DRAW);
-    
-    console.log(drawingInfo.vertices.length);
-    console.log(drawingInfo.normals.length);
-    console.log(drawingInfo.colors.length);
-
-    return drawingInfo;
+function cameraRotation(){
+    if(rotation){
+        console.log("x")
+        alpha = alpha + 0.02;
+        gl.uniform1f(timeLoc, alpha);
+        eRot = vec3(radius * Math.sin(alpha), 0, radius * Math.cos(alpha));
+        var V = lookAt(eRot, vec3(0.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0));
+        gl.uniformMatrix4fv(VLoc,false, flatten(V));
+        render();
+        requestAnimationFrame(cameraRotation);   
+    } 
 }
