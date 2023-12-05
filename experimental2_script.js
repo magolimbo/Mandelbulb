@@ -1,11 +1,6 @@
 //make points as polygons, with the original point as an attribute, which is the center
 //so render points as quads, make quad around normal
-
 //make a texture that has a kernel that falls off from the center (cubic function) or gaussian -.> fall off to 0 so no seems
-
-var g_objDoc = null; // The information of OBJ file
-var g_drawingInfo = null; // The information for drawing 3D model
-
 
 var pointsArray = []
 var colorsArray = []
@@ -22,6 +17,33 @@ const radius = 2.0;
 var alpha
 var eRot
 var rotation
+var exponent = 8;
+var dim = 32;
+
+//---- GLOBAL VARIABLES FOR OBJECT LOADING----///
+var showMesh = true;
+var model = null;
+var g_objDoc = null; // The information of OBJ file
+var g_drawingInfo = null; // The information for drawing 3D model
+
+//---- GLOBAL VARIABLES FOR ROTATE AND DOLLY MODE -----//
+var xPan = 0.0;
+var yPan = 0.0;
+var diff = 0.0;
+
+var dragging  = false;
+var dollyMode = false;
+var rotMode   = false;
+
+var eye0;
+var at0 ;
+var up0 ;
+var x0 ; 
+var y0 ;  
+
+var last_qinc;
+var startTime, endTime;
+var timeDiff;
 
 
 window.onload = function init(){
@@ -36,24 +58,29 @@ window.onload = function init(){
     }    
 
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0.8, 0.5, 0.0, 1.0);  //Si imposta il colore di sfondo del canvas
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);  //Si imposta il colore di sfondo del canvas
 
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK);
     gl.enable(gl.DEPTH_TEST);
-
+    
     program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program); 
 
     gl.vBuffer = null;
     gl.cBuffer = null;
-    gl.nBuffer = null;
 
     //------------1 point perspective--------------------------------
     // Configura la matrice di vista (View Matrix)
-    var eye = vec3(0, 0, -5);
-    var at  = vec3(0, 0, 0);
-    var up  = vec3(0.0, 1.0, 0.0);
+    var eye = vec3(0.0,0.0,-10); // Modifica la posizione verticale della telecamera
+    var at = vec3(0.0,0.0,0.0); // Punto verso cui la telecamera è orientata (centro della sfera)
+    var up = vec3(1.0,0.0,0.0); // Vettore "up" della telecamera
+
+    eye0 = vec3(0.0,0.0,-5.0);
+    at0  = vec3(0.0,0.0,0.0);
+    up0  = vec3(0.0,1.0,0.0);
+    x0   = vec3(1.0,0.0,0.0);
+    y0   = vec3(0.0,1.0,0.0);
 
     // Usa la funzione lookAt per configurare la matrice di vista
     var V = lookAt(eye, at, up);
@@ -65,8 +92,7 @@ window.onload = function init(){
     var aspect = 1.0;   // Rapporto di aspetto 1:1 (canvas quadrato)
     var near = 1;     // Distanza minima dalla telecamera
     var far = 15.0;    // Distanza massima dalla telecamera
-    var P = perspective(45, aspect, 0.1, 100);
-    //P = perspective(45, 1, 0.1, 200.0); 
+    var P = perspective(fovy, aspect, near, far);
     var PLoc = gl.getUniformLocation(program, "P");
     gl.uniformMatrix4fv(PLoc, false, flatten(P));
 
@@ -84,67 +110,96 @@ window.onload = function init(){
     var lightColorLoc = gl.getUniformLocation(program, "lightColor");
     gl.uniform4fv(lightColorLoc, flatten(lightColor));
 
+    /* var materialColor = vec4(100, 100, 10, 1.0); //diffuse reflection coefficient kd
+    var materialColorLoc = gl.getUniformLocation(program, "materialColor");
+    gl.uniform4fv(materialColorLoc, flatten(materialColor));
+ */
     vPosition = gl.getAttribLocation(program, "vPosition"); 
     gl.enableVertexAttribArray(vPosition); 
+
+    /*vColor = gl.getAttribLocation(program, "vColor"); 
+    gl.enableVertexAttribArray(vColor); 
+    
+    vNormal = gl.getAttribLocation(program, "vNormal"); 
+    gl.enableVertexAttribArray(vNormal);*/
+
+    //points dimensions
+    var pointsDimLoc = gl.getUniformLocation(program,"pointsDim");
+    gl.uniform1f(pointsDimLoc, 2.0); 
 
     //sphere parameters
     alpha = 0.0;
     eRot = vec3(radius * Math.sin(alpha), 0, radius * Math.cos(alpha));
     rotation = false;
-
-    //intitBulb(gl, 128);  //calculates points of madelBulb point cloud.
     gl.clear(gl.COLOR_BUFFER_BIT);
-    //var filename = 'bulb1.obj';
-    var filename = '../worksheet5/monkey.obj'
+    //for the mandelBulb point cloud
+    initBulb(gl, dim, exponent);
     
-    var model = initObject(gl, filename, 10.0);
+    var q_rot = new Quaternion();
+    var q_inc = new Quaternion();
+    last_qinc = q_inc;
 
-    //renderModel();
-    //cameraRotation();
+    initEventHandlers(canvas, q_rot, q_inc);
 
-    function renderModel()
-    {
-        if(!g_drawingInfo && g_objDoc && g_objDoc.isMTLComplete()) {
-            g_drawingInfo = onReadComplete(gl, model, g_objDoc);
-        }
-        if(!g_drawingInfo) {return;}
+    var rotButton = document.getElementById("rot");
+    var dollyButton = document.getElementById("dolly");
 
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.drawElements(gl.TRIANGLES, g_drawingInfo.indices.length, gl.UNSIGNED_INT, 0);
-    }
-
-    function tick(){
-        renderModel();
-        requestAnimationFrame(tick);
-    }
-    tick();
-
-
-    document.getElementById("incrementSubd").onclick = function(){
-        if(numTimesToSubdivide < 6)
-            numTimesToSubdivide++;
-            initSphere(gl, numTimesToSubdivide)
-            if(!rotation){
-                render();
-            }
-    };
-
-    document.getElementById("decrementSubd").onclick = function(){
-        if(numTimesToSubdivide){
-            numTimesToSubdivide--; 
-        } 
-        initSphere(gl, numTimesToSubdivide)
-        if(!rotation){
-            render();
-        }
-    };
+    rotButton.addEventListener("click", function(event) { 
+        rotMode = true;
+        dollyMode = false;
+    })
+    dollyButton.addEventListener("click", function(event) { 
+        rotMode = false;
+        dollyMode = true;
+    })
 
     document.getElementById("sphereRotation").onclick = function(){
         if(!rotation){
             rotation = true;
         }
         else rotation = false;
-        cameraRotation();
+        cameraRotation()
+    };
+
+    document.getElementById("pointsDimensions").addEventListener("input", function(event)
+    {
+        gl.uniform1f(pointsDimLoc, event.target.value);
+        render();
+
+    });
+
+    document.getElementById("mandelbulbExponent+").onclick = function(){
+        if(exponent < 20){
+            exponent++
+            initBulb(gl, dim, exponent)
+        }
+    };
+
+    document.getElementById("mandelbulbExponent-").onclick = function(){
+        if(exponent > 2){
+            exponent--
+            initBulb(gl, dim, exponent)
+        }
+    };
+
+    document.getElementById("mandelbulbDensity+").onclick = function(){
+        if(dim < 128){
+            dim *= 2
+            initBulb(gl, dim, exponent)
+        }
+    };
+
+    document.getElementById("mandelbulbDensity-").onclick = function(){
+        if(dim > 2){
+            dim = dim/2
+            initBulb(gl, dim, exponent)
+        }
+    };
+
+    document.getElementById("fancyMandelbulb1").onclick = function(){  //però sarebbe da fare un altro bottone che ritorna al point cloud.
+        showMesh = !showMesh;
+        console.log(showMesh);
+        render();
     };
 
     function cameraRotation(){
@@ -152,21 +207,99 @@ window.onload = function init(){
             console.log("x")
             alpha = alpha + 0.02;
             eRot = vec3(radius * Math.sin(alpha), 0, radius * Math.cos(alpha));
-            var V = lookAt(eRot, vec3(0.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0));
+            V = lookAt(eRot, vec3(0.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0));
             gl.uniformMatrix4fv(VLoc,false, flatten(V));
-            tick();  
-        } 
+            render();
+            //requestAnimationFrame(cameraRotation);   
+        } else if (rotMode){
+            console.log("rotate mode");
+    
+            up = vec3(q_rot.apply(up0));
+            eye = add(vec3(q_rot.apply(eye0)),at);
+            at = add(at, scale(-1.0, add(scale(xPan, vec3(q_rot.apply(x0)) ),scale(yPan , vec3(q_rot.apply(y0)) ))) );
+            V = lookAt(eye, at, up);
+    
+        } else if (dollyMode) {
+            console.log("dolly mode");
+            if (eye0[2] + diff >= 0) {
+                eye0[2] = 0;
+            } else{
+                eye0[2] += diff;
+                diff = 0;
+            }
+            up  = vec3(q_rot.apply(up0));
+            eye = add(vec3(q_rot.apply(eye0)),at);
+            at  = add(at, scale(-1.0, add(scale(xPan, vec3(q_rot.apply(x0)) ),scale(yPan , vec3(q_rot.apply(y0)) ))) );
+            V = lookAt(eye, at, up);
+        }
+        var VLoc = gl.getUniformLocation(program, "V");
+        gl.uniformMatrix4fv(VLoc, false, flatten(V)); 
+        
     }
 
+
+    function render(){
+        //cameraRotation();
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.drawArrays(gl.VERTICES, 0, pointsArray.length);
+        //requestAnimationFrame(render);
+    }
+
+    function tick(){
+        end();
+        if (timeDiff >= 10000){
+            last_qinc.setIdentity();
+            start();
+        }
+        q_rot = q_rot.multiply(last_qinc);
+        cameraRotation();
+        render();
+        requestAnimationFrame(tick);
+    }
+    start();
+    tick();
 }
 
-function render(){
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.drawArrays(gl.VERTICES, 0, pointsArray.length);
+/*function render(){ 
+    if(showMesh){
+        var filename = '../worksheet5/monkey.obj';
+        model = initObject(gl, filename, 1.0);
+        console.log("im hereee");
+        var eye = vec3(0, 0, 5);
+        var at  = vec3(0, 0, 0);
+        var up  = vec3(0.0, 1.0, 0.0);
+
+        var V    = lookAt(eye, at, up);
+        var VLoc = gl.getUniformLocation(program, "V");
+        gl.uniformMatrix4fv(VLoc, false, flatten(V));
+
+        var P = perspective(45, 1, 0.1, 200.0); 
+        var PLoc = gl.getUniformLocation(program, "P");
+        gl.uniformMatrix4fv(PLoc, false, flatten(P));
+        tick(); //renders model;
+    } else {
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.drawArrays(gl.VERTICES, 0, pointsArray.length);
+    //}
 }
 
+function tick(){
+    renderModel();
+    requestAnimationFrame(tick);
+}*/
 
-function intitBulb(gl, dim) {
+function renderModel(){
+    if(!g_drawingInfo && g_objDoc && g_objDoc.isMTLComplete()) {
+        g_drawingInfo = onReadComplete(gl, model, g_objDoc);
+    }
+    if(!g_drawingInfo) {return;}
+
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawElements(gl.TRIANGLES, g_drawingInfo.indices.length, gl.UNSIGNED_INT, 0);
+}
+
+//calculates points for mandelbulb pointcloud
+function initBulb(gl, dim, exponent) {
 
     pointsArray = []
 
@@ -190,7 +323,7 @@ function intitBulb(gl, dim) {
                     r     = Math.sqrt(zeta[0]*zeta[0] + zeta[1]*zeta[1] + zeta[2]*zeta[2]);
                     theta = Math.atan2( Math.sqrt(zeta[0]*zeta[0] + zeta[1]*zeta[1]), zeta[2]);
                     phi   = Math.atan2(zeta[1], zeta[0]);
-                    newvec = createSpherical(r, theta, phi, 8); //this fives me newx newy and newz
+                    newvec = createSpherical(r, theta, phi, exponent); //this fives me newx newy and newz
                     zeta[0] = newvec[0] + x
                     zeta[1] = newvec[1] + y
                     zeta[2] = newvec[2] + z
@@ -219,13 +352,20 @@ function intitBulb(gl, dim) {
     gl.bufferData(gl.ARRAY_BUFFER, flatten(pointsArray), gl.STATIC_DRAW);
     gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0);
 
-    /*gl.deleteBuffer(gl.nBuffer);
+    /*gl.deleteBuffer(gl.cBuffer);
+    gl.cBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.cBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(colorsArray), gl.STATIC_DRAW);
+    gl.vertexAttribPointer(vColor, 4, gl.FLOAT, false, 0, 0);
+       
+    //buffer normali
+    gl.deleteBuffer(gl.nBuffer);
     gl.nBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.nBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(normalsArray), gl.STATIC_DRAW);
     gl.vertexAttribPointer(vNormal, 4, gl.FLOAT, false, 0, 0);*/
 
-    render();
+    //render();
 }
 
 function createSpherical(r, theta, phi, n){  //n = 8
@@ -238,77 +378,79 @@ function createSpherical(r, theta, phi, n){  //n = 8
 
 }
 
+
 function map(value, start1, stop1, start2, stop2)
 {
     return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
 }
 
-//dont need this ??
-function initSphere(gl, numSubdivs) {
-    pointsArray = []
-    colorsArray = []
-    normalsArray = []
+//---- FUNCTIONS FOR ROTATE AND DOLLY MODE-----///
+function project_to_sphere(x, y) {
+    var r = 2;
+    var d = Math.sqrt(x * x + y * y);
+    var t = r * Math.sqrt(2);
+    var z;
 
-    var va = vec4(0.0, 0.0, 1.0, 1);
-    var vb = vec4(0.0, 0.942809, -0.333333, 1);
-    var vc = vec4(-0.816497, -0.471405, -0.333333, 1);
-    var vd = vec4(0.816497, -0.471405, -0.333333, 1);
-
-    tetrahedron(va, vb, vc, vd, numSubdivs);
-
-    //vertex buffer
-    gl.deleteBuffer(gl.vBuffer);
-    gl.vBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.vBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(pointsArray), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0); 
-       
-    //buffer normali
-    gl.deleteBuffer(gl.nBuffer);
-    gl.nBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.nBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(normalsArray), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(vNormal, 4, gl.FLOAT, false, 0, 0);
-
-    render();
+    if (d < r) { // Inside sphere
+        z = Math.sqrt(r * r - d * d);
+    } else if (d < t) {
+        z = 0;
+    } else {       // On hyperbola
+        z = t * t / d;
+    }
+    return z;
 }
 
-//dont need this ??
-function triangle(a, b, c) {
-    pointsArray.push(a);
-    pointsArray.push(b);
-    pointsArray.push(c);
+function initEventHandlers(canvas, qrot, qinc) {
+    var dragging = false;         // Dragging or not
+    var lastX = -1, lastY = -1;   // Last position of the mouse
+  
+    canvas.onmousedown = function (ev) {   // Mouse is pressed
+      var x = ev.clientX, y = ev.clientY;
+      // Start dragging if a mouse is in <canvas>
+      var rect = ev.target.getBoundingClientRect();
+      if (rect.left <= x && x < rect.right && rect.top <= y && y < rect.bottom) {
+        lastX = x; lastY = y;
+        dragging = true;
+      }
+    };
+  
+    canvas.onmouseup = function (ev) {
+      qinc.setIdentity();
+      dragging = false;
+    }; // Mouse is released
+  
+    canvas.onmousemove = function (ev) { // Mouse is moved
+        var x = ev.clientX, y = ev.clientY;
+        if (dragging) {
+            var rect = ev.target.getBoundingClientRect();
+            var s_x = ((x - rect.left) / rect.width - 0.5) * 2;
+            var s_y = (0.5 - (y - rect.top) / rect.height) * 2;
+            var s_last_x = ((lastX - rect.left) / rect.width - 0.5) * 2;
+            var s_last_y = (0.5 - (lastY - rect.top) / rect.height) * 2;
+            if (rotMode) {
+                var v1 = vec3(s_x, s_y, project_to_sphere(s_x, s_y));
+                var v2 = vec3(s_last_x, s_last_y, project_to_sphere(s_last_x, s_last_y));
+                qinc = qinc.make_rot_vec2vec(normalize(v1), normalize(v2));
+                qrot = qrot.multiply(qinc);
+            }
+            else if (dollyMode) {
+                diff = 2*(s_y - s_last_y);
+            } 
+        }
+        lastX = x, lastY = y;
+      };
+  }
 
-    normalsArray.push(vec4(a[0], a[1], a[2], 0.0));
-    normalsArray.push(vec4(b[0], b[1], b[2], 0.0));
-    normalsArray.push(vec4(c[0], c[1], c[2], 0.0)); 
+function start() {
+    startTime = new Date();
 }
-
-//dont need this ??
-function divideTriangle(a, b, c, count) {
-   if ( count > 0 ) {
-
-       var ab = normalize(mix( a, b, 0.5), true);
-       var ac = normalize(mix( a, c, 0.5), true);
-       var bc = normalize(mix( b, c, 0.5), true);
-
-       divideTriangle( a, ab, ac, count - 1 );
-       divideTriangle( ab, b, bc, count - 1 );
-       divideTriangle( bc, c, ac, count - 1 );
-       divideTriangle( ab, bc, ac, count - 1 );
-   }
-   else { // draw tetrahedron at end of recursion
-       triangle( a, b, c );
-   }
+  
+function end() {
+    endTime = new Date();
+    timeDiff = endTime - startTime; //in ms
+    
 }
-//dont need this ??
-function tetrahedron(a, b, c, d, n) {
-   divideTriangle(a, b, c, n);
-   divideTriangle(d, c, b, n);
-   divideTriangle(a, d, b, n);
-   divideTriangle(a, c, d, n);
-}
-
 
 
 //---- FUNCTIONS FOR OBJECT LOADING ------///
@@ -353,9 +495,6 @@ function readOBJFile(fileName, gl, model, scale, reverse) {
     request.open('GET', fileName, true); // Create a request to get file
     request.send(); // Send the request
 }
-
-var g_objDoc = null; // The information of OBJ file
-var g_drawingInfo = null; // The information for drawing 3D model
 
 // OBJ file has been read
 function onReadOBJFile(fileString, fileName, gl, o, scale, reverse) {
