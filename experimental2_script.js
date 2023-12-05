@@ -21,7 +21,7 @@ var exponent = 8;
 var dim = 32;
 
 //---- GLOBAL VARIABLES FOR OBJECT LOADING----///
-var showMesh = true;
+var showMesh = false;
 var model = null;
 var g_objDoc = null; // The information of OBJ file
 var g_drawingInfo = null; // The information for drawing 3D model
@@ -117,23 +117,31 @@ window.onload = function init(){
     vPosition = gl.getAttribLocation(program, "vPosition"); 
     gl.enableVertexAttribArray(vPosition); 
 
-    /*vColor = gl.getAttribLocation(program, "vColor"); 
+    vColor = gl.getAttribLocation(program, "vColor"); 
     gl.enableVertexAttribArray(vColor); 
     
     vNormal = gl.getAttribLocation(program, "vNormal"); 
-    gl.enableVertexAttribArray(vNormal);*/
+    gl.enableVertexAttribArray(vNormal);
 
     //points dimensions
     var pointsDimLoc = gl.getUniformLocation(program,"pointsDim");
     gl.uniform1f(pointsDimLoc, 2.0); 
 
+    var meshLoc = gl.getUniformLocation(program, "showMesh");
+    gl.uniform1f(meshLoc, 0.0);
+
     //sphere parameters
     alpha = 0.0;
     eRot = vec3(radius * Math.sin(alpha), 0, radius * Math.cos(alpha));
     rotation = false;
+    
+    filename = "../worksheet5/monkey.obj";
+    model = initObject(gl, filename, 1.0);
+    
     gl.clear(gl.COLOR_BUFFER_BIT);
     //for the mandelBulb point cloud
     initBulb(gl, dim, exponent);
+
     
     var q_rot = new Quaternion();
     var q_inc = new Quaternion();
@@ -146,19 +154,23 @@ window.onload = function init(){
 
     rotButton.addEventListener("click", function(event) { 
         rotMode = true;
+        rotation = false;
         dollyMode = false;
     })
     dollyButton.addEventListener("click", function(event) { 
         rotMode = false;
+        rotation = false;
         dollyMode = true;
     })
 
     document.getElementById("sphereRotation").onclick = function(){
         if(!rotation){
             rotation = true;
+            dollyMode = false;
+            rotMode = false;
         }
         else rotation = false;
-        cameraRotation()
+        cameraRotation();
     };
 
     document.getElementById("pointsDimensions").addEventListener("input", function(event)
@@ -199,7 +211,13 @@ window.onload = function init(){
     document.getElementById("fancyMandelbulb1").onclick = function(){  //però sarebbe da fare un altro bottone che ritorna al point cloud.
         showMesh = !showMesh;
         console.log(showMesh);
-        render();
+        if(!showMesh) {
+            initBulb(gl, dim, exponent);
+        } else {
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            model = initObject(gl, filename, 1.0);
+        }
+        tick();
     };
 
     function cameraRotation(){
@@ -240,8 +258,30 @@ window.onload = function init(){
 
     function render(){
         //cameraRotation();
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        gl.drawArrays(gl.VERTICES, 0, pointsArray.length);
+        if(!showMesh){
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.drawArrays(gl.VERTICES, 0, pointsArray.length);
+        } else {   //showing the mesh
+            //gl.clear(0.0, 0.0, 0.0, 1.0);
+
+            gl.deleteBuffer(gl.vBuffer);
+            gl.deleteBuffer(gl.cBuffer);
+            gl.deleteBuffer(gl.nBuffer);
+
+            eye = vec3(0, 0, 5);
+            at  = vec3(0, 0, 0);
+            up  = vec3(0.0, 1.0, 0.0);
+
+            V    = lookAt(eye, at, up);
+            VLoc = gl.getUniformLocation(program, "V");
+            gl.uniformMatrix4fv(VLoc, false, flatten(V));
+
+            P = perspective(45, 1, 0.1, 200.0); 
+            PLoc = gl.getUniformLocation(program, "P");
+            gl.uniformMatrix4fv(PLoc, false, flatten(P));
+
+            renderModel();
+        }
         //requestAnimationFrame(render);
     }
 
@@ -260,33 +300,6 @@ window.onload = function init(){
     tick();
 }
 
-/*function render(){ 
-    if(showMesh){
-        var filename = '../worksheet5/monkey.obj';
-        model = initObject(gl, filename, 1.0);
-        console.log("im hereee");
-        var eye = vec3(0, 0, 5);
-        var at  = vec3(0, 0, 0);
-        var up  = vec3(0.0, 1.0, 0.0);
-
-        var V    = lookAt(eye, at, up);
-        var VLoc = gl.getUniformLocation(program, "V");
-        gl.uniformMatrix4fv(VLoc, false, flatten(V));
-
-        var P = perspective(45, 1, 0.1, 200.0); 
-        var PLoc = gl.getUniformLocation(program, "P");
-        gl.uniformMatrix4fv(PLoc, false, flatten(P));
-        tick(); //renders model;
-    } else {
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        gl.drawArrays(gl.VERTICES, 0, pointsArray.length);
-    //}
-}
-
-function tick(){
-    renderModel();
-    requestAnimationFrame(tick);
-}*/
 
 function renderModel(){
     if(!g_drawingInfo && g_objDoc && g_objDoc.isMTLComplete()) {
@@ -301,7 +314,9 @@ function renderModel(){
 //calculates points for mandelbulb pointcloud
 function initBulb(gl, dim, exponent) {
 
-    pointsArray = []
+    pointsArray  = [];
+    colorsArray  = [];
+    normalsArray = [];
 
     //per i vari c
     var i = 0; var j = 0; var k = 0;
@@ -339,6 +354,8 @@ function initBulb(gl, dim, exponent) {
                         if(!edge){
                             edge = true;
                             pointsArray.push(vec4(x, y, z, 1.0));
+                            colorsArray.push(vec4(1.0));  //place holders
+                            normalsArray.push(vec4(1.0));
                         }
                         break;
                     }
@@ -352,18 +369,17 @@ function initBulb(gl, dim, exponent) {
     gl.bufferData(gl.ARRAY_BUFFER, flatten(pointsArray), gl.STATIC_DRAW);
     gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 0, 0);
 
-    /*gl.deleteBuffer(gl.cBuffer);
+    gl.deleteBuffer(gl.cBuffer);
     gl.cBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.cBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(colorsArray), gl.STATIC_DRAW);
     gl.vertexAttribPointer(vColor, 4, gl.FLOAT, false, 0, 0);
        
-    //buffer normali
     gl.deleteBuffer(gl.nBuffer);
     gl.nBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.nBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(normalsArray), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(vNormal, 4, gl.FLOAT, false, 0, 0);*/
+    gl.vertexAttribPointer(vNormal, 4, gl.FLOAT, false, 0, 0); 
 
     //render();
 }

@@ -12,8 +12,8 @@
 <script id="vertex-shader" type="x-shader/x-vertex">
 
     attribute vec4 vPosition;
-    //attribute vec4 vColor;
-    //attribute vec4 vNormal;
+    attribute vec4 vColor;
+    attribute vec4 vNormal;
 
     varying vec4 pos;
     varying vec4 color;
@@ -27,25 +27,33 @@
     uniform mat4 P;
     uniform mat4 M; 
 
-    void main() {
+    uniform float showMesh;
 
-        color        = vec4(0.0, 0.0, 0.0, 1.0);
+    void main() {
+        if(showMesh == 1.0){
+            color = vec4(vNormal.y*vColor.rgb, vColor.a);
+        } else {
+            color = vec4(1.0);
+        }
         gl_Position  = P * V * M * vPosition;
         gl_PointSize = pointsDim; 
         fPosition = vPosition;
-
-
-
     }
     </script>
     <script id="fragment-shader" type="x-shader/x-fragment">
-        precision mediump float; 
+        precision highp float; 
+
         varying vec4 color;
         varying vec4 fPosition;
+
+        uniform float showMesh;
         
         void main() {
-        //gl_FragColor = vec4(1.0,1.0,1.0,1.0); 
-        gl_FragColor = fPosition * 0.5 + 0.5;
+            if(showMesh == 1.0) {
+                gl_FragColor = color;
+            } else {
+                gl_FragColor = fPosition * 0.5 + 0.5;
+            }
         }
         </script>
 
