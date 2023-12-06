@@ -22,6 +22,7 @@ var dim = 32;
 
 //---- GLOBAL VARIABLES FOR OBJECT LOADING----///
 var showMesh = false;
+var first = true;
 var model = null;
 var g_objDoc = null; // The information of OBJ file
 var g_drawingInfo = null; // The information for drawing 3D model
@@ -214,7 +215,6 @@ window.onload = function init(){
         if(!showMesh) {
             initBulb(gl, dim, exponent);
         } else {
-            gl.clear(gl.COLOR_BUFFER_BIT);
             model = initObject(gl, filename, 1.0);
         }
         tick();
@@ -263,10 +263,6 @@ window.onload = function init(){
             gl.drawArrays(gl.VERTICES, 0, pointsArray.length);
         } else {   //showing the mesh
             //gl.clear(0.0, 0.0, 0.0, 1.0);
-
-            gl.deleteBuffer(gl.vBuffer);
-            gl.deleteBuffer(gl.cBuffer);
-            gl.deleteBuffer(gl.nBuffer);
 
             eye = vec3(0, 0, 5);
             at  = vec3(0, 0, 0);
@@ -484,8 +480,8 @@ function initObject(gl, obj_filename, scale){
 
 function initiVertexBuffers(gl){
     var obj = new Object();
-    obj.vertexBuffer = createEmptyArrayBuffer(gl, program.vPosition, 4, gl.FLOAT);
-    obj.normalBuffer = createEmptyArrayBuffer(gl, program.vNormal, 4, gl.FLOAT);
+    obj.vertexBuffer = createEmptyArrayBuffer(gl, program.vPosition, 3, gl.FLOAT);
+    obj.normalBuffer = createEmptyArrayBuffer(gl, program.vNormal, 3, gl.FLOAT);
     obj.colorBuffer  = createEmptyArrayBuffer(gl, program.vColor, 4, gl.FLOAT);
     obj.indexBuffer  = gl.createBuffer();
     return obj;
@@ -527,7 +523,7 @@ function onReadOBJFile(fileString, fileName, gl, o, scale, reverse) {
 function onReadComplete(gl, model, objDoc) {
 // Acquire the vertex coordinates and colors from OBJ file
     var drawingInfo = objDoc.getDrawingInfo();
-// Write date into the buffer object
+// Write data into the buffer object
     gl.bindBuffer(gl.ARRAY_BUFFER, model.vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, drawingInfo.vertices,gl.STATIC_DRAW);
 
@@ -541,6 +537,7 @@ function onReadComplete(gl, model, objDoc) {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, drawingInfo.indices, gl.STATIC_DRAW);
     
+    console.log("original size of buffers");
     console.log(drawingInfo.vertices.length);
     console.log(drawingInfo.normals.length);
     console.log(drawingInfo.colors.length);
