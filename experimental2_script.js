@@ -136,7 +136,7 @@ window.onload = function init(){
     eRot = vec3(radius * Math.sin(alpha), 0, radius * Math.cos(alpha));
     rotation = false;
     
-    filename = "../worksheet5/monkey.obj";
+    filename = "C:/Users/Admin/Documents/GitHub/Mandelbulb/suzanne.obj";
     model = initObject(gl, filename, 1.0);
     
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -396,7 +396,9 @@ function map(value, start1, stop1, start2, stop2)
     return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
 }
 
-//---- FUNCTIONS FOR ROTATE AND DOLLY MODE-----///
+//******************************************************************************************************* */
+//---------------- FUNCTIONS FOR ROTATE AND DOLLY MODE----------------------///
+//****************************************************************************************************** */
 function project_to_sphere(x, y) {
     var r = 2;
     var d = Math.sqrt(x * x + y * y);
@@ -464,8 +466,9 @@ function end() {
     
 }
 
-
-//---- FUNCTIONS FOR OBJECT LOADING ------///
+//************************************************************************************************ */
+//----------------------------- FUNCTIONS FOR OBJECT LOADING ---------------------------///
+//************************************************************************************************* */
 function initObject(gl, obj_filename, scale){
     program.vPosition = gl.getAttribLocation(program, 'vPosition');
     program.vNormal   = gl.getAttribLocation(program, 'vNormal');
