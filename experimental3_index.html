@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html><body>
+<title>import object</title>
+<script type="text/javascript" src = "../common/webgl-utils.js"></script>
+<script type="text/javascript" src = "../common/initShaders.js"></script>
+<script type="text/javascript" src = "../common/MV.js"></script>
+<script type="text/javascript" src = "../common/OBJParser.js"></script>
+<script type="text/javascript" src = "experimental3_script.js"></script>
+
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+    attribute vec3 vPosition; 
+    attribute vec4 vColor;
+    attribute vec3 vNormal;
+
+    varying vec4 a_color;
+    varying vec3 fPosition;
+    
+    uniform mat4 V; //view matrix
+    uniform mat4 P; //projection matrix   // 45degrees
+    uniform mat4 M; //model matrix
+
+       void main(){
+            gl_Position = P*V*M* vec4(vPosition, 1.0);
+            fPosition   = vPosition;
+            a_color     = vec4(vNormal.y*vColor.rgb, vColor.a);
+       }
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+    precision mediump float;
+    varying vec4 a_color;
+    varying vec3 fPosition;
+
+    uniform float showMesh;
+
+    void main() {
+        if(showMesh == 1.0) {
+            gl_FragColor = a_color;
+        } else {
+            gl_FragColor = vec4(fPosition,1.0) * 0.5 + 0.5;
+        }
+    }
+</script>
+
+</head>
+<body>
+    <canvas id="canvas" width="512" height="512"> The browser does not support the HTML5 canvas element. </canvas>
+
+    <button id="fancyMandelbulb1">Fancy Mandelbulb 1</button>
+</body>
+</html>

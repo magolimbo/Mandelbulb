@@ -136,7 +136,8 @@ window.onload = function init(){
     eRot = vec3(radius * Math.sin(alpha), 0, radius * Math.cos(alpha));
     rotation = false;
     
-    filename = "C:/Users/Admin/Documents/GitHub/Mandelbulb/suzanne.obj";
+    //filename = "C:/Users/Admin/Documents/GitHub/Mandelbulb/suzanne.obj";
+    filename = "suzanne.obj"
     model = initObject(gl, filename, 1.0);
     
     gl.clear(gl.COLOR_BUFFER_BIT);
