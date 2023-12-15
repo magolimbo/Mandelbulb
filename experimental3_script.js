@@ -194,7 +194,7 @@ window.onload = function init(){
     gl.clear(gl.COLOR_BUFFER_BIT);
     
     //initBulb(gl, dim, exponent);  //fills the vertexArray, colorsArray and normalsArray
-    var filename = "../bulb/exp8apply-objlegacy.obj";
+    var filename = "bulb/exp8apply-objlegacy.obj";
     var model = initObject(gl, filename, 0.0);
 
     var q_rot = new Quaternion();
@@ -516,7 +516,7 @@ function initEventHandlers(canvas, qrot, qinc) {
     var dragging = false;         // Dragging or not
     var lastX = -1, lastY = -1;   // Last position of the mouse
   
-    canvas.onmousedown = function (ev) {   // Mouse is pressed
+    canvas.onmousedown = function (ev) {   // Mouse is pr essed
       var x = ev.clientX, y = ev.clientY;
       // Start dragging if a mouse is in <canvas>
       var rect = ev.target.getBoundingClientRect();
