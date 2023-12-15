@@ -229,12 +229,15 @@ window.onload = function init(){
 
     document.getElementById("pointsDimensions").addEventListener("input", function(event)
     {
+        if(showMesh){return;}
         gl.uniform1f(pointsDimLoc, event.target.value);
         render();
 
     });
 
     document.getElementById("mandelbulbExponent+").onclick = function(){
+        if(showMesh){return;}
+
         if(exponent < 20){
             exponent++
             initBulb(gl, dim, exponent)
@@ -242,6 +245,8 @@ window.onload = function init(){
     };
 
     document.getElementById("mandelbulbExponent-").onclick = function(){
+        if(showMesh){return;}
+
         if(exponent > 2){
             exponent--
             initBulb(gl, dim, exponent)
@@ -249,6 +254,8 @@ window.onload = function init(){
     };
 
     document.getElementById("mandelbulbDensity+").onclick = function(){
+        if(showMesh){return;}
+
         if(dim < 128){
             dim *= 2
             initBulb(gl, dim, exponent)
@@ -256,6 +263,8 @@ window.onload = function init(){
     };
 
     document.getElementById("mandelbulbDensity-").onclick = function(){
+        if(showMesh){return;}
+
         if(dim > 2){
             dim = dim/2
             initBulb(gl, dim, exponent)
