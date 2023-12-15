@@ -1,11 +1,177 @@
 <!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandelbulb</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #c {
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        #menuContainer {
+            background-color: #dcd8d8;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(193, 193, 193, 0.1);
+        }
+
+        #menuContainer > div {
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            color: #4e4e4e;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: #577a93;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        input {
+            width: 100px;
+            margin-left: 10px;
+        }
+
+        label {
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        input[type="range"]:focus {
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 5px;
+            cursor: pointer;
+            box-shadow: 1px 1px 1px #000000;
+            background: #3071a9;
+            border-radius: 1.3px;
+            border: 0.2px solid #010101;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            box-shadow: 1px 1px 1px #000000;
+            border: 1px solid #010101;
+            height: 20px;
+            width: 20px;
+            border-radius: 10px;
+            background: #ffffff;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -8px;
+        }
+
+        input[type="range"]:focus::-webkit-slider-runnable-track {
+            background: #367ebd;
+        }
+
+        input[type="range"]::-moz-range-track {
+            width: 100%;
+            height: 5px;
+            cursor: pointer;
+            box-shadow: 1px 1px 1px #000000;
+            background: #3071a9;
+            border-radius: 1.3px;
+            border: 0.2px solid #010101;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            box-shadow: 1px 1px 1px #000000;
+            border: 1px solid #010101;
+            height: 20px;
+            width: 20px;
+            border-radius: 10px;
+            background: #ffffff;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-ms-track {
+            width: 100%;
+            height: 5px;
+            cursor: pointer;
+            background: transparent;
+            border-color: transparent;
+            color: transparent;
+        }
+
+        input[type="range"]::-ms-fill-lower {
+            background: #2a6495;
+            border: 0.2px solid #010101;
+            border-radius: 2.6px;
+            box-shadow: 1px 1px 1px #000000;
+        }
+
+        input[type="range"]::-ms-fill-upper {
+            background: #3071a9;
+            border: 0.2px solid #010101;
+            border-radius: 2.6px;
+            box-shadow: 1px 1px 1px #000000;
+        }
+
+        input[type="range"]::-ms-thumb {
+            box-shadow: 1px 1px 1px #000000;
+            border: 1px solid #010101;
+            height: 20px;
+            width: 20px;
+            border-radius: 10px;
+            background: #ffffff;
+            cursor: pointer;
+        }
+        
+        .button-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .button-group button {
+            margin-right: 10px;
+        }
+
+    </style>
+</head>
+
+<body> 
+
 <html><body>
 <title>import object</title>
 <script type="text/javascript" src = "../common/webgl-utils.js"></script>
 <script type="text/javascript" src = "../common/initShaders.js"></script>
-<script type="text/javascript" src = "../common/MV.js"></script>
-<script type="text/javascript" src = "../common/OBJParser.js"></script>
-<script type="text/javascript" src = "experimental3_script.js"></script>
+<script type="text/javascript" src = "../common/MV.js">         </script>
+<script type="text/javascript" src = "../common/OBJParser.js">  </script>
+<script type="text/javascript" src = "quaternion.js">           </script>
+<script type="text/javascript" src = "experimental3_script.js"> </script>
 
 
 <script id="vertex-shader" type="x-shader/x-vertex">
@@ -20,10 +186,14 @@
     uniform mat4 P; //projection matrix   // 45degrees
     uniform mat4 M; //model matrix
 
+    uniform float pointsDim;
+
        void main(){
             gl_Position = P*V*M* vec4(vPosition, 1.0);
             fPosition   = vPosition;
-            a_color     = vec4(vNormal.y*vColor.rgb, vColor.a);
+            gl_PointSize = pointsDim; 
+            vec4 meshColor = vec4(0.6, 0.796, 1.0, 1.0);
+            a_color     = vec4(vNormal.y*meshColor.rgb, vColor.a - 0.1);
        }
 </script>
 
@@ -41,12 +211,42 @@
             gl_FragColor = vec4(fPosition,1.0) * 0.5 + 0.5;
         }
     }
-</script>
+</script> 
 
 </head>
 <body>
     <canvas id="canvas" width="512" height="512"> The browser does not support the HTML5 canvas element. </canvas>
 
-    <button id="fancyMandelbulb1">Fancy Mandelbulb 1</button>
+     <div id="menuContainer">
+        <h2>Toggle Mandelbulb</h2>
+        <div id="buttonContainer">
+            <button id="sphereRotation">Sphere Rotation</button>
+        </div>
+        <div class = "button-group">
+            <label for="mandelbulbExponent+">Mandelbulb Exponent</label>
+            <button id="mandelbulbExponent+">increase</button>
+            <button id="mandelbulbExponent-">decrease</button>
+        </div>
+        <div class = "button-group">
+            <label for="mandelbulbDensity+">Point Cloud Density</label>
+            <button id="mandelbulbDensity+">increase</button>
+            <button id="mandelbulbDensity-">decrease</button>
+        </div>
+
+        <div>
+            <label for="pointsDimensions">Increase Points Dimensions</label>
+            <input type="range" id="pointsDimensions" min="0.0" max="50.0" step="0.5" value="2.0">
+        </div>
+
+        <div class = "button-group" >
+            <button id = "rot">Rotate mode</button>
+            <button id = "dolly">Dolly mode</button>
+        </div>
+
+
+        <button id="fancyMandelbulb1">Show Point Cloud</button>
+
+     </div>
+
 </body>
 </html>

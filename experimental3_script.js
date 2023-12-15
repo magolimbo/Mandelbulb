@@ -106,6 +106,28 @@ var center_of_bulb = vec3(0.0);
 //to render pointcloud
 var firstTime_model = true;
 var firstTime_cloud = true;
+var firstTime = true;
+
+
+//---- GLOBAL VARIABLES FOR ROTATE AND DOLLY MODE -----//
+var xPan = 0.0;
+var yPan = 0.0;
+var diff = 0.0;
+
+var dragging  = false;
+var dollyMode = false;
+var rotMode   = false;
+
+var eye0;
+var at0 ;
+var up0 ;
+var x0 ; 
+var y0 ;  
+
+var last_qinc;
+var startTime, endTime;
+var timeDiff;
+
 
 
 window.onload = function init(){
@@ -126,9 +148,15 @@ window.onload = function init(){
     gl.cullFace(gl.BACK);
     gl.enable(gl.DEPTH_TEST);
     
-    var eye = vec3(0, 0, -5);
+    var eye = vec3(0, 0, -10);
     var at  = vec3(0, 0, 0);
     var up  = vec3(0.0, 1.0, 0.0);
+
+    eye0 = vec3(0.0,0.0,-15.0);
+    at0  = vec3(0.0,0.0,0.0);
+    up0  = vec3(0.0,1.0,0.0);
+    x0   = vec3(1.0,0.0,0.0);
+    y0   = vec3(0.0,1.0,0.0);
 
     var V    = lookAt(eye, at, up);
     var VLoc = gl.getUniformLocation(gl.program, "V");
@@ -138,26 +166,106 @@ window.onload = function init(){
     var PLoc = gl.getUniformLocation(gl.program, "P");
     gl.uniformMatrix4fv(PLoc, false, flatten(P));
 
-    var S  = scalem(1, 1, 1);
-
-    var M1 = S;
+    var M1 = mat4();
     var MLoc = gl.getUniformLocation(gl.program, "M");
     gl.uniformMatrix4fv(MLoc, false, flatten(M1));
+
+    vPosition = gl.getAttribLocation(gl.program, "vPosition"); 
+    gl.enableVertexAttribArray(vPosition); 
+
+    vColor = gl.getAttribLocation(gl.program, "vColor"); 
+    gl.enableVertexAttribArray(vColor); 
+    
+    vNormal = gl.getAttribLocation(gl.program, "vNormal"); 
+    gl.enableVertexAttribArray(vNormal);
+
+    //points dimensions
+    var pointsDimLoc = gl.getUniformLocation(gl.program,"pointsDim");
+    gl.uniform1f(pointsDimLoc, 2.0); 
     
     var meshLoc = gl.getUniformLocation(gl.program, "showMesh");
     gl.uniform1f(meshLoc, showMesh ? 1.0 : 0.0);
 
+    //sphere parameters
+    alpha = 0.0;
+    eRot = vec3(radius * Math.sin(alpha), 0, radius * Math.cos(alpha));
+    rotation = false;
+
     gl.clear(gl.COLOR_BUFFER_BIT);
     
-    //var filename = '../worksheet5/monkey.obj'
+    //initBulb(gl, dim, exponent);  //fills the vertexArray, colorsArray and normalsArray
     var filename = "../bulb/exp8apply-objlegacy.obj";
     var model = initObject(gl, filename, 0.0);
 
-    //initBulb(gl, dim, exponent);  //fills the vertexArray, colorsArray and normalsArray
+    var q_rot = new Quaternion();
+    var q_inc = new Quaternion();
+    last_qinc = q_inc;
 
+    initEventHandlers(canvas, q_rot, q_inc);
 
-    document.getElementById("fancyMandelbulb1").onclick = function(){  //però sarebbe da fare un altro bottone che ritorna al point cloud.
+    var rotButton = document.getElementById("rot");
+    var dollyButton = document.getElementById("dolly");
+
+    rotButton.addEventListener("click", function(event) { 
+        rotMode = true;
+        rotation = false;
+        dollyMode = false;
+    })
+    dollyButton.addEventListener("click", function(event) { 
+        rotMode = false;
+        rotation = false;
+        dollyMode = true;
+    })
+
+    document.getElementById("sphereRotation").onclick = function(){
+        if(!rotation){
+            rotation = true;
+            dollyMode = false;
+            rotMode = false;
+        }
+        else rotation = false;
+        cameraRotation();
+    };
+
+    document.getElementById("pointsDimensions").addEventListener("input", function(event)
+    {
+        gl.uniform1f(pointsDimLoc, event.target.value);
+        render();
+
+    });
+
+    document.getElementById("mandelbulbExponent+").onclick = function(){
+        if(exponent < 20){
+            exponent++
+            initBulb(gl, dim, exponent)
+        }
+    };
+
+    document.getElementById("mandelbulbExponent-").onclick = function(){
+        if(exponent > 2){
+            exponent--
+            initBulb(gl, dim, exponent)
+        }
+    };
+
+    document.getElementById("mandelbulbDensity+").onclick = function(){
+        if(dim < 128){
+            dim *= 2
+            initBulb(gl, dim, exponent)
+        }
+    };
+
+    document.getElementById("mandelbulbDensity-").onclick = function(){
+        if(dim > 2){
+            dim = dim/2
+            initBulb(gl, dim, exponent)
+        }
+    };
+
+    var switchButton = document.getElementById("fancyMandelbulb1");
+    switchButton.addEventListener("click" , function(){  //però sarebbe da fare un altro bottone che ritorna al point cloud.
         showMesh = !showMesh;
+        this.innerText = showMesh ? 'Show Point Cloud' : 'Show Mesh';
         console.log(showMesh);
         if(!showMesh) {
             //initBulb(gl, dim, exponent);
@@ -171,17 +279,58 @@ window.onload = function init(){
             gl.uniform1f(meshLoc, 1.0);
         }
         tick();
-    };
+    });
+
+
+    function cameraRotation(){
+        if(rotation){
+            var dist = showMesh ? 15 : 3.5;
+            eye = vec3(
+                dist * Math.sin(Date.now() * 0.001),
+                0,
+                dist * Math.cos(Date.now() * 0.001)
+            );
+            V = lookAt(eye, at, up);
+            VLoc = gl.getUniformLocation(gl.program, "V");
+            gl.uniformMatrix4fv(VLoc, false, flatten(V));
+        } else if (rotMode){
+            console.log("rotate mode");
+    
+            up = vec3(q_rot.apply(up0));
+            eye = add(vec3(q_rot.apply(eye0)),at);
+            at = add(at, scale(-1.0, add(scale(xPan, vec3(q_rot.apply(x0)) ),scale(yPan , vec3(q_rot.apply(y0)) ))) );
+            V = lookAt(eye, at, up);
+    
+        } else if (dollyMode) {
+            console.log("dolly mode");
+            if (eye0[2] + diff >= 0) {
+                eye0[2] = 0;
+            } else{
+                eye0[2] += diff;
+                diff = 0;
+            }
+            up  = vec3(q_rot.apply(up0));
+            eye = add(vec3(q_rot.apply(eye0)),at);
+            at  = add(at, scale(-1.0, add(scale(xPan, vec3(q_rot.apply(x0)) ),scale(yPan , vec3(q_rot.apply(y0)) ))) );
+            V = lookAt(eye, at, up);
+        }
+        var VLoc = gl.getUniformLocation(gl.program, "V");
+        gl.uniformMatrix4fv(VLoc, false, flatten(V)); 
+        
+    }
 
     function render()
     {
         if(showMesh){
+            //gl.clearColor(0.0, 0.0, 0.0, 1.0);//color the canvas
             if(firstTime_model){
                 //g_objDoc = null;
+                //gl.clearColor(0.0, 0.0, 0.0, 1.0);//color the canvas
+
                 model = initObject(gl, filename, 1.0);
                 firstTime_model = false;
-
-                var eye = vec3(0, 0, -20); // Adjust the values based on your scene
+                eye0 = vec3(0.0,0.0,-15.0);
+                var eye = vec3(0, 0, -15); // Adjust the values based on your scene
                 var at = vec3(0, 0, 0);
                 var up = vec3(0.0, 1.0, 0.0); // Up vector
 
@@ -194,14 +343,24 @@ window.onload = function init(){
             }
             if(!g_drawingInfo) {return;}
 
-        //var center_of_bulb = findBoundingBox(g_drawingInfo.vertices);
+            //gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            console.log(model);
+            //console.log(g_drawingInfo);
 
-            gl.clear(gl.COLOR_BUFFER_BIT);
+            //gl.clear(gl.COLOR_BUFFER_BIT);
             console.log("drawing model");
             gl.drawElements(gl.TRIANGLES, g_drawingInfo.indices.length, gl.UNSIGNED_INT, 0);
         } else {
             if(firstTime_cloud){
                 firstTime_cloud = false;
+
+                eye0 = vec3(0.0,0.0,-3.5);
+                var eye = vec3(0, 0, -3.5);
+                var at  = vec3(0, 0, 0);
+                var up  = vec3(0, 1, 0);
+                V = lookAt(eye, at, up);
+                gl.uniformMatrix4fv(VLoc, false, flatten(V)); 
+
                 gl.deleteBuffer(model.vBuffer);
                 gl.deleteBuffer(model.cBuffer);
                 gl.deleteBuffer(model.nBuffer);
@@ -216,7 +375,7 @@ window.onload = function init(){
                 gl.enableVertexAttribArray(vNormal);
 
                 g_drawingInfo = null;
-                initBulb(gl, dim, exponent);  //THIS FUCKING BINDS THE NEW BUFFERSSSS SO WHAT IS THE PRPOBLEMMMMMM
+                initBulb(gl, dim, exponent);
                 return;  //???
             }
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -225,14 +384,26 @@ window.onload = function init(){
     }
 
     function tick(){
+        //gl.clearColor(0.0, 0.0, 0.0, 1.0);//color the canvas
+        end();
+        if (timeDiff >= 10000){
+            last_qinc.setIdentity();
+            start();
+        }
+        q_rot = q_rot.multiply(last_qinc);
+        cameraRotation();
         render();
         requestAnimationFrame(tick);
     }
 
+    start();
     tick();
     //render();
 }
 
+//******************************************************************************************************* */
+//---------------- FUNCTIONS FOR POINT CLOUD ----------------------///
+//****************************************************************************************************** */
 function initBulb(gl, dim, exponent) {
 
     pointsArray  = [];
@@ -319,4 +490,75 @@ function createSpherical(r, theta, phi, n){  //n = 8
 function map(value, start1, stop1, start2, stop2)
 {
     return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
+}
+
+
+//******************************************************************************************************* */
+//---------------- FUNCTIONS FOR ROTATE AND DOLLY MODE----------------------///
+//****************************************************************************************************** */
+function project_to_sphere(x, y) {
+    var r = 2;
+    var d = Math.sqrt(x * x + y * y);
+    var t = r * Math.sqrt(2);
+    var z;
+
+    if (d < r) { // Inside sphere
+        z = Math.sqrt(r * r - d * d);
+    } else if (d < t) {
+        z = 0;
+    } else {       // On hyperbola
+        z = t * t / d;
+    }
+    return z;
+}
+
+function initEventHandlers(canvas, qrot, qinc) {
+    var dragging = false;         // Dragging or not
+    var lastX = -1, lastY = -1;   // Last position of the mouse
+  
+    canvas.onmousedown = function (ev) {   // Mouse is pressed
+      var x = ev.clientX, y = ev.clientY;
+      // Start dragging if a mouse is in <canvas>
+      var rect = ev.target.getBoundingClientRect();
+      if (rect.left <= x && x < rect.right && rect.top <= y && y < rect.bottom) {
+        lastX = x; lastY = y;
+        dragging = true;
+      }
+    };
+  
+    canvas.onmouseup = function (ev) {
+      qinc.setIdentity();
+      dragging = false;
+    }; // Mouse is released
+  
+    canvas.onmousemove = function (ev) { // Mouse is moved
+        var x = ev.clientX, y = ev.clientY;
+        if (dragging) {
+            var rect = ev.target.getBoundingClientRect();
+            var s_x = ((x - rect.left) / rect.width - 0.5) * 2;
+            var s_y = (0.5 - (y - rect.top) / rect.height) * 2;
+            var s_last_x = ((lastX - rect.left) / rect.width - 0.5) * 2;
+            var s_last_y = (0.5 - (lastY - rect.top) / rect.height) * 2;
+            if (rotMode) {
+                var v1 = vec3(s_x, s_y, project_to_sphere(s_x, s_y));
+                var v2 = vec3(s_last_x, s_last_y, project_to_sphere(s_last_x, s_last_y));
+                qinc = qinc.make_rot_vec2vec(normalize(v1), normalize(v2));
+                qrot = qrot.multiply(qinc);
+            }
+            else if (dollyMode) {
+                diff = 2*(s_y - s_last_y);
+            } 
+        }
+        lastX = x, lastY = y;
+      };
+  }
+
+function start() {
+    startTime = new Date();
+}
+  
+function end() {
+    endTime = new Date();
+    timeDiff = endTime - startTime; //in ms
+    
 }
