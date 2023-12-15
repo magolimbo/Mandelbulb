@@ -7,21 +7,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mandelbulb</title>
     <style>
+
+        h1, canvas {
+            display: block;
+        }
+   
         body {
             font-family: 'Arial', sans-serif;
             background-color: #f2f2f2;
             margin: 0;
             padding: 0;
             display: flex;
-            justify-content: center;
-            align-items: center;
+            flex-direction: column; /* Stack children vertically */
+            align-items: center; /* Center items horizontally */
             height: 100vh;
         }
 
-        #c {
-            border: 1px solid #ccc;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
+        #contentContainer {
+            display: flex;
+            justify-content: space-between; /* Place items at each end of the container */
         }
 
         #menuContainer {
@@ -29,10 +33,16 @@
             border-radius: 8px;
             padding: 20px;
             box-shadow: 0 0 10px rgba(193, 193, 193, 0.1);
+            width: 35%;
         }
 
         #menuContainer > div {
             margin-bottom: 10px;
+        }
+
+        #canvas {
+            margin-bottom: 20px;
+            width: 50%;
         }
 
         h2 {
@@ -215,38 +225,41 @@
 
 </head>
 <body>
+
+    <h1>The Mandelbulb Experience</h1>
+
+    <div id = "contentContainer">
     <canvas id="canvas" width="512" height="512"> The browser does not support the HTML5 canvas element. </canvas>
 
-     <div id="menuContainer">
-        <h2>Toggle Mandelbulb</h2>
-        <div id="buttonContainer">
-            <button id="sphereRotation">Sphere Rotation</button>
+
+        <div id="menuContainer">
+            <h2>Toggle Mandelbulb</h2>
+            <div id="buttonContainer">
+                <button id="sphereRotation">Sphere Rotation</button>
+            </div>
+            <div class = "button-group">
+                <label for="mandelbulbExponent+">Mandelbulb Exponent</label>
+                <button id="mandelbulbExponent+">increase</button>
+                <button id="mandelbulbExponent-">decrease</button>
+            </div>
+            <div class = "button-group">
+                <label for="mandelbulbDensity+">Point Cloud Density</label>
+                <button id="mandelbulbDensity+">increase</button>
+                <button id="mandelbulbDensity-">decrease</button>
+            </div>
+
+            <div>
+                <label for="pointsDimensions">Increase Point Dimension</label>
+                <input type="range" id="pointsDimensions" min="0.0" max="50.0" step="0.5" value="2.0">
+            </div>
+
+            <div class = "button-group" >
+                <button id = "rot">Rotate mode</button>
+                <button id = "dolly">Dolly mode</button>
+            </div class = "button-group">
+                <button id="fancyMandelbulb1">Show Point Cloud</button>
+            <div>
         </div>
-        <div class = "button-group">
-            <label for="mandelbulbExponent+">Mandelbulb Exponent</label>
-            <button id="mandelbulbExponent+">increase</button>
-            <button id="mandelbulbExponent-">decrease</button>
-        </div>
-        <div class = "button-group">
-            <label for="mandelbulbDensity+">Point Cloud Density</label>
-            <button id="mandelbulbDensity+">increase</button>
-            <button id="mandelbulbDensity-">decrease</button>
-        </div>
-
-        <div>
-            <label for="pointsDimensions">Increase Points Dimensions</label>
-            <input type="range" id="pointsDimensions" min="0.0" max="50.0" step="0.5" value="2.0">
-        </div>
-
-        <div class = "button-group" >
-            <button id = "rot">Rotate mode</button>
-            <button id = "dolly">Dolly mode</button>
-        </div>
-
-
-        <button id="fancyMandelbulb1">Show Point Cloud</button>
-
-     </div>
-
+    </div>
 </body>
 </html>
