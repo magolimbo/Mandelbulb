@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
@@ -6,21 +7,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mandelbulb</title>
     <style>
+
+        h1, canvas {
+            display: block;
+        }
+   
         body {
             font-family: 'Arial', sans-serif;
             background-color: #f2f2f2;
             margin: 0;
             padding: 0;
             display: flex;
-            justify-content: center;
-            align-items: center;
+            flex-direction: column; /* Stack children vertically */
+            align-items: center; /* Center items horizontally */
             height: 100vh;
         }
 
-        #c {
-            border: 1px solid #ccc;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
+        #contentContainer {
+            display: flex;
+            justify-content: space-between; /* Place items at each end of the container */
         }
 
         #menuContainer {
@@ -28,10 +33,16 @@
             border-radius: 8px;
             padding: 20px;
             box-shadow: 0 0 10px rgba(193, 193, 193, 0.1);
+            width: 35%;
         }
 
         #menuContainer > div {
             margin-bottom: 10px;
+        }
+
+        #canvas {
+            margin-bottom: 20px;
+            width: 50%;
         }
 
         h2 {
@@ -162,64 +173,66 @@
 </head>
 
 <body> 
-<canvas id="c" width="720" height="720"></canvas>
+
+<html><body>
+<title>import object</title>
+<script type="text/javascript" src = "../common/webgl-utils.js"></script>
+<script type="text/javascript" src = "../common/initShaders.js"></script>
+<script type="text/javascript" src = "../common/MV.js">         </script>
+<script type="text/javascript" src = "../common/OBJParser.js">  </script>
+<script type="text/javascript" src = "quaternion.js">           </script>
+<script type="text/javascript" src = "script.js"> </script>
 
 
-<script type="text/javascript" src="experimental2_script.js"></script>
-<script type="text/javascript" src="../common/webgl-utils.js"></script>
-<script type="text/javascript" src="../common/initShaders.js"></script>
-<script type="text/javascript" src="../common/OBJParser.js"></script>
-<script type="text/javascript" src="../common/MV.js"></script>
-<script type="text/javascript" src="quaternion.js"></script>
 <script id="vertex-shader" type="x-shader/x-vertex">
-
-    attribute vec3 vPosition;
+    attribute vec3 vPosition; 
     attribute vec4 vColor;
     attribute vec3 vNormal;
 
-    varying vec4 pos;
-    varying vec4 color;
-    varying vec4 fPosition;
+    varying vec4 a_color;
+    varying vec3 fPosition;
+    
+    uniform mat4 V; //view matrix
+    uniform mat4 P; //projection matrix   // 45degrees
+    uniform mat4 M; //model matrix
 
-    uniform vec4 lightDirection; 
-    uniform vec4 lightColor; //Le (Light emission)
     uniform float pointsDim;
- 
-    uniform mat4 V;
-    uniform mat4 P;
-    uniform mat4 M; 
+
+       void main(){
+            gl_Position = P*V*M* vec4(vPosition, 1.0);
+            fPosition   = vPosition;
+            gl_PointSize = pointsDim; 
+            vec4 meshColor = vec4(0.6, 0.796, 1.0, 1.0);
+            a_color     = vec4(vNormal.y*meshColor.rgb, vColor.a - 0.1);
+       }
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+    precision mediump float;
+    varying vec4 a_color;
+    varying vec3 fPosition;
 
     uniform float showMesh;
 
     void main() {
-        if(showMesh == 1.0){
-            color = vec4(vNormal.y*vColor.rgb, vColor.a);
+        if(showMesh == 1.0) {
+            gl_FragColor = a_color;
         } else {
-            color = vec4(1.0);
+            gl_FragColor = vec4(fPosition,1.0) * 0.5 + 0.5;
         }
-        gl_Position  = P * V * M * vec4(vPosition, 1.0);
-        gl_PointSize = pointsDim; 
-        fPosition = vec4(vPosition, 1.0);
     }
-    </script>
-    <script id="fragment-shader" type="x-shader/x-fragment">
-        precision highp float; 
+</script> 
 
-        varying vec4 color;
-        varying vec4 fPosition;
+</head>
+<body>
 
-        uniform float showMesh;
-        
-        void main() {
-            if(showMesh == 1.0) {
-                gl_FragColor = color;
-            } else {
-                gl_FragColor = fPosition * 0.5 + 0.5;
-            }
-        }
-        </script>
+    <h1>The Mandelbulb Experience</h1>
+    <h4>If the model doesn't show up, please refresh the page</h4>
 
-        <!-- Aggiunta del menu -->
+    <div id = "contentContainer">
+    <canvas id="canvas" width="512" height="512"> The browser does not support the HTML5 canvas element. </canvas>
+
+
         <div id="menuContainer">
             <h2>Toggle Mandelbulb</h2>
             <div id="buttonContainer">
@@ -237,30 +250,17 @@
             </div>
 
             <div>
-                <label for="pointsDimensions">Increase Points Dimensions</label>
+                <label for="pointsDimensions">Increase Point Dimension</label>
                 <input type="range" id="pointsDimensions" min="0.0" max="50.0" step="0.5" value="2.0">
             </div>
 
-            <div class="button-group" >
-                <button id="rot">Rotate mode</button>
-                <button id="dolly">Dolly mode</button>
-            </div>
-
-            <button id="fancyMandelbulb1">Fancy Mandelbulb 1</button>
-            <button id="fancyMandelbulb2">Fancy Mandelbulb 2</button>
-
-
-            <table border="3">  
-                <tr>
-                    <td align = "center">abc</td>
-                    <td >123456</td> 
-                </tr> 
-                <tr>
-                    <td>gaia</td>
-                    <td>andrea</td>
-                </tr>
-            </table>
-
-
+            <div class = "button-group" >
+                <button id = "rot">Rotate mode</button>
+                <button id = "dolly">Dolly mode</button>
+            </div class = "button-group">
+                <button id="fancyMandelbulb1">Show Point Cloud</button>
+            <div>
+        </div>
     </div>
-</body></html>
+</body>
+</html>
