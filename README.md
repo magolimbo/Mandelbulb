@@ -1,5 +1,8 @@
 # Mandelbulb
 
+<p align="center">
+  <img src="bulb/mandelbulbdemo.gif" width="600" alt="Demo animation"/>
+</p>
 
 
 A simple WebGL demo that renders a 3D Mandelbulb inspired by the 2009 formulation. It supports two visualization modes:
